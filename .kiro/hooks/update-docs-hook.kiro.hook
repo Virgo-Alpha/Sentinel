@@ -1,0 +1,28 @@
+{
+  "enabled": true,
+  "name": "Update Documentation",
+  "description": "Automatically updates docs and README when any implementation file changes to keep documentation in sync with code",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.py",
+      "*.js",
+      "*.ts",
+      "*.java",
+      "*.cpp",
+      "*.c",
+      "*.go",
+      "*.rs",
+      "*.rb",
+      "*.php",
+      "*.cs",
+      "*.kt",
+      "*.swift"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Implementation files have been modified. Please review the changes and update the README.md and any relevant documentation files to reflect the current state of the codebase. Ensure that examples, API documentation, and usage instructions are accurate and up-to-date."
+  }
+}

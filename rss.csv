@@ -1,0 +1,22 @@
+FeedName,FeedURL,Category
+ANSSI Avis,https://www.cert.ssi.gouv.fr/avis/feed/,Advisories
+ANSSI Alertes,https://www.cert.ssi.gouv.fr/alerte/feed/,Alerts
+CISA Current Activity,https://www.cisa.gov/cybersecurity-advisories/alerts.xml,Advisories
+CISA Known Exploited Vulnerabilities,https://www.cisa.gov/known-exploited-vulnerabilities-catalog.xml,Vulnerabilities
+UK NCSC News,https://www.ncsc.gov.uk/api/1/services/v1/all-rss-feed.xml,Advisories
+Microsoft Security Blog,https://www.microsoft.com/security/blog/feed/,Vendor
+Microsoft Sentinel Blog,https://techcommunity.microsoft.com/gxcuf89792/rss/board?board.id=MicrosoftSentinelBlog,Vendor
+Google TAG Blog,https://blog.google/threat-analysis-group/rss/,Threat Intel
+Mandiant Blog,https://www.mandiant.com/resources/rss.xml,Threat Intel
+CrowdStrike Blog,https://www.crowdstrike.com/blog/feed/,Vendor
+NCC Group Research,https://research.nccgroup.com/feed/,Research
+SANS Internet Storm Center,https://isc.sans.edu/rssfeed.xml,Threat Intel
+DarkReading,https://www.darkreading.com/rss.xml,News
+BleepingComputer Security,https://www.bleepingcomputer.com/feed/,News
+The Hacker News,https://feeds.feedburner.com/TheHackersNews,News
+SecurityWeek,https://feeds.feedburner.com/securityweek,News
+Krebs on Security,https://krebsonsecurity.com/feed/,News
+Leak-Lookup Blog,https://leak-lookup.com/blog/rss/,Data Breach
+Cyber-News,https://cybernews.com/feed/,News
+ENISA Publications,https://www.enisa.europa.eu/news/enisa-news/RSS,Policy
+Cybersecurity hub,https://www.cshub.com/rss/news,News

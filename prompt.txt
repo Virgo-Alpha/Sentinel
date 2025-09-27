@@ -1,0 +1,62 @@
+Prompt RSS Feed
+
+Below is a list of RSS feed URLs:
+https://www.cert.ssi.gouv.fr/avis/feed/
+https://www.cert.ssi.gouv.fr/alerte/feed/
+https://www.cisa.gov/cybersecurity-advisories/alerts.xml
+https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+https://www.ncsc.gov.uk/api/1/services/v1/all-rss-feed.xml
+https://blog.google/threat-analysis-group/rss/
+https://www.mandiant.com/resources/rss.xml
+https://www.crowdstrike.com/blog/feed/
+https://www.nccgroup.com/us/research-blog/feed/
+https://isc.sans.edu/rssfeed.xml
+https://www.darkreading.com/rss.xml
+https://www.bleepingcomputer.com/feed/
+https://feeds.feedburner.com/TheHackersNews
+https://feeds.feedburner.com/securityweek
+https://krebsonsecurity.com/feed/
+https://leak-lookup.com/rss
+https://cybernews.com/feed/
+https://www.cshub.com/rss/news
+
+
+Analyse the content of each of those feed URLs and look for the following keywords:
+Azure/Entra/Microsoft 365,
+Amazon Web Services(AWS),
+Google Workspace,
+Mimecast,
+Fortinet Products,
+CloudFlare,
+DarkTrace,
+SentinelOne,
+ThreatLocker,
+Digital Guardian,
+Varonis,
+Symantec,
+Moodle,
+Blockmark Registry,
+Pervade Software,
+Rizikon,
+Jamf Pro,
+Brevo,
+TextLocal,
+Strata Insight,
+Tenable,
+N-able Mail Assure,
+Cylance,
+CyberArk,
+Checkpoint Firewall,
+BlackBerry UEM,
+Oracle Human Capital Management,
+Oracle FlexCUBE,
+Olympic Banking System,
+Cisco Devices - Cisco Nexus9000, Cisco C3850, Cisco 9300,
+Checkpoint Firewall - CheckPoint 5900,
+Citrix Products - [Citrix StoreFront,Citrix Xen Desktop,Citrix ADC, Citrix License Server],
+LexisNexis Risk Solutions,
+Nutanix HCI
+
+Return a table in xlsx format with the title of the article, the link of the article, the date of the news article, the keyword, keyword hit count and description. The date in the table should be in descending order.
+
+Perform Deep Research
