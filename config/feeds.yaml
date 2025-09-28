@@ -1,0 +1,181 @@
+# RSS Feed Configuration
+# This file defines all RSS feeds to monitor for cybersecurity intelligence
+
+feeds:
+  # Government and National CERTs
+  - name: "ANSSI Avis"
+    url: "https://www.cert.ssi.gouv.fr/avis/feed/"
+    category: "Advisories"
+    enabled: true
+    fetch_interval: "1h"
+    description: "French National Cybersecurity Agency advisories"
+    
+  - name: "CISA Known Exploited Vulnerabilities"
+    url: "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.xml"
+    category: "Vulnerabilities"
+    enabled: true
+    fetch_interval: "30m"
+    description: "CISA KEV catalog feed"
+    
+  - name: "NCSC UK Alerts"
+    url: "https://www.ncsc.gov.uk/api/1/services/v1/all-rss-feed.xml"
+    category: "Alerts"
+    enabled: true
+    fetch_interval: "1h"
+    description: "UK National Cyber Security Centre alerts"
+
+  # Major Vendor Security Feeds
+  - name: "Microsoft Security Response Center"
+    url: "https://msrc.microsoft.com/blog/feed"
+    category: "Vendor"
+    enabled: true
+    fetch_interval: "2h"
+    description: "Microsoft security updates and advisories"
+    
+  - name: "Google Threat Analysis Group"
+    url: "https://blog.google/threat-analysis-group/rss/"
+    category: "Threat Intel"
+    enabled: true
+    fetch_interval: "4h"
+    description: "Google TAG threat intelligence reports"
+
+  # Security Research and Threat Intelligence
+  - name: "Mandiant Threat Intelligence"
+    url: "https://www.mandiant.com/resources/blog/rss.xml"
+    category: "Threat Intel"
+    enabled: true
+    fetch_interval: "2h"
+    description: "Mandiant threat research and intelligence"
+    
+  - name: "CrowdStrike Blog"
+    url: "https://www.crowdstrike.com/blog/feed/"
+    category: "Threat Intel"
+    enabled: true
+    fetch_interval: "4h"
+    description: "CrowdStrike threat intelligence and research"
+    
+  - name: "NCC Group Research"
+    url: "https://research.nccgroup.com/feed/"
+    category: "Research"
+    enabled: true
+    fetch_interval: "6h"
+    description: "NCC Group security research"
+
+  # Security News and Analysis
+  - name: "SANS Internet Storm Center"
+    url: "https://isc.sans.edu/rssfeed.xml"
+    category: "News"
+    enabled: true
+    fetch_interval: "1h"
+    description: "SANS ISC daily security updates"
+    
+  - name: "Dark Reading"
+    url: "https://www.darkreading.com/rss.xml"
+    category: "News"
+    enabled: true
+    fetch_interval: "2h"
+    description: "Cybersecurity news and analysis"
+    
+  - name: "Bleeping Computer"
+    url: "https://www.bleepingcomputer.com/feed/"
+    category: "News"
+    enabled: true
+    fetch_interval: "1h"
+    description: "Technology news and security updates"
+    
+  - name: "The Hacker News"
+    url: "https://feeds.feedburner.com/TheHackersNews"
+    category: "News"
+    enabled: true
+    fetch_interval: "1h"
+    description: "Cybersecurity news and updates"
+    
+  - name: "Security Week"
+    url: "https://www.securityweek.com/feed"
+    category: "News"
+    enabled: true
+    fetch_interval: "2h"
+    description: "Enterprise security news"
+    
+  - name: "Krebs on Security"
+    url: "https://krebsonsecurity.com/feed/"
+    category: "News"
+    enabled: true
+    fetch_interval: "4h"
+    description: "In-depth security journalism"
+
+  # Data Breach and Leak Intelligence
+  - name: "Leak-Lookup"
+    url: "https://leak-lookup.com/rss"
+    category: "Data Breach"
+    enabled: true
+    fetch_interval: "2h"
+    description: "Data breach and leak notifications"
+    
+  - name: "Cybernews"
+    url: "https://cybernews.com/feed/"
+    category: "News"
+    enabled: true
+    fetch_interval: "2h"
+    description: "Cybersecurity news and data breach reports"
+
+  # European and International
+  - name: "ENISA Publications"
+    url: "https://www.enisa.europa.eu/publications/rss"
+    category: "Policy"
+    enabled: true
+    fetch_interval: "6h"
+    description: "European cybersecurity agency publications"
+    
+  - name: "Cybersecurity Hub"
+    url: "https://www.cybersecurityhub.gov.au/rss.xml"
+    category: "Advisories"
+    enabled: true
+    fetch_interval: "4h"
+    description: "Australian cybersecurity advisories"
+
+# Feed Categories
+categories:
+  - name: "Advisories"
+    description: "Official security advisories from government agencies"
+    priority: "high"
+    
+  - name: "Alerts"
+    description: "Urgent security alerts and warnings"
+    priority: "critical"
+    
+  - name: "Vulnerabilities"
+    description: "Vulnerability disclosures and CVE information"
+    priority: "high"
+    
+  - name: "Vendor"
+    description: "Security updates from technology vendors"
+    priority: "medium"
+    
+  - name: "Threat Intel"
+    description: "Threat intelligence and analysis"
+    priority: "high"
+    
+  - name: "Research"
+    description: "Security research and technical analysis"
+    priority: "medium"
+    
+  - name: "News"
+    description: "General cybersecurity news and updates"
+    priority: "low"
+    
+  - name: "Data Breach"
+    description: "Data breach notifications and reports"
+    priority: "high"
+    
+  - name: "Policy"
+    description: "Cybersecurity policy and regulatory updates"
+    priority: "low"
+
+# Global feed settings
+settings:
+  default_fetch_interval: "2h"
+  max_articles_per_fetch: 50
+  content_retention_days: 365
+  failed_fetch_retry_count: 3
+  failed_fetch_backoff_multiplier: 2

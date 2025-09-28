@@ -1,0 +1,58 @@
+# Feature Flags Configuration
+# Controls gradual rollout of system capabilities
+
+# Core Agent Features
+enable_agents: false  # Start with direct Lambda orchestration, enable AgentCore later
+enable_amplify: false  # Enable web application when ready
+enable_opensearch: false  # Enable vector search when ready
+
+# Processing Features
+enable_semantic_dedup: true  # Enable semantic deduplication with embeddings
+enable_llm_relevance: true  # Enable LLM-based relevance assessment
+enable_auto_publish: false  # Require human review initially
+enable_email_notifications: true  # Enable email alerts and digests
+enable_keyword_analysis: true  # Enable keyword matching and analysis
+
+# Performance Controls
+max_concurrent_feeds: 5  # Maximum feeds to process simultaneously
+max_articles_per_batch: 50  # Maximum articles per processing batch
+relevance_threshold: 0.7  # Minimum relevance score for consideration
+similarity_threshold: 0.85  # Minimum similarity for duplicate detection
+
+# Cost Controls
+max_daily_llm_calls: 10000  # Maximum LLM API calls per day
+max_monthly_cost_usd: 1000.0  # Maximum monthly AWS costs
+
+# Quality Controls
+confidence_threshold: 0.8  # Minimum confidence for auto-actions
+guardrail_strictness: "medium"  # "low", "medium", "high"
+human_review_percentage: 100  # Percentage of items to route for human review initially
+
+# Experimental Features
+enable_a2a_memory: false  # Agent-to-agent memory sharing
+enable_feedback_learning: false  # Learn from human feedback
+enable_trend_analysis: false  # Keyword trend analysis
+enable_threat_scoring: false  # Advanced threat impact scoring
+
+# Development and Testing
+enable_debug_logging: true  # Detailed logging for development
+enable_trace_storage: true  # Store execution traces in S3
+enable_mock_llm: false  # Use mock LLM responses for testing
+enable_dry_run: false  # Process without making changes
+
+# Rollout Strategy
+rollout_percentage: 100  # Percentage of traffic to process (for gradual rollout)
+canary_feeds: []  # Specific feeds for canary testing
+beta_users: []  # Beta user list for early access
+
+# Monitoring and Alerting
+enable_performance_monitoring: true
+enable_cost_alerting: true
+enable_error_alerting: true
+enable_quality_monitoring: true
+
+# Integration Toggles
+enable_step_functions: true  # Use Step Functions for orchestration
+enable_eventbridge: true  # Use EventBridge for scheduling
+enable_sqs_buffering: true  # Use SQS for error handling and buffering
+enable_xray_tracing: true  # Enable X-Ray distributed tracing

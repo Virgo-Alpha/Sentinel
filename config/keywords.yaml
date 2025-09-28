@@ -1,0 +1,269 @@
+# Target Keywords Configuration
+# This file defines keywords to monitor for relevance assessment
+
+# Cloud Platforms and Services
+cloud_platforms:
+  - keyword: "Azure"
+    variations: ["Microsoft Azure", "Azure AD", "Azure Active Directory"]
+    weight: 1.0
+    description: "Microsoft Azure cloud platform"
+    
+  - keyword: "Entra"
+    variations: ["Microsoft Entra", "Entra ID", "Azure Entra"]
+    weight: 1.0
+    description: "Microsoft Entra identity platform"
+    
+  - keyword: "Microsoft 365"
+    variations: ["M365", "Office 365", "O365", "Microsoft Office"]
+    weight: 1.0
+    description: "Microsoft 365 productivity suite"
+    
+  - keyword: "Amazon Web Services"
+    variations: ["AWS", "Amazon AWS", "Amazon Cloud"]
+    weight: 1.0
+    description: "Amazon Web Services cloud platform"
+    
+  - keyword: "Google Workspace"
+    variations: ["G Suite", "Google Apps", "Gmail for Business"]
+    weight: 1.0
+    description: "Google Workspace productivity suite"
+
+# Security Vendors and Products
+security_vendors:
+  - keyword: "Mimecast"
+    variations: ["Mimecast Email Security"]
+    weight: 1.0
+    description: "Email security platform"
+    
+  - keyword: "Fortinet"
+    variations: ["FortiGate", "FortiOS", "Fortinet Products"]
+    weight: 1.0
+    description: "Network security solutions"
+    
+  - keyword: "CloudFlare"
+    variations: ["Cloudflare", "CF", "Cloudflare CDN"]
+    weight: 1.0
+    description: "Web performance and security"
+    
+  - keyword: "DarkTrace"
+    variations: ["Darktrace", "Darktrace AI"]
+    weight: 1.0
+    description: "AI-powered cybersecurity"
+    
+  - keyword: "SentinelOne"
+    variations: ["Sentinel One", "S1"]
+    weight: 1.0
+    description: "Endpoint detection and response"
+    
+  - keyword: "ThreatLocker"
+    variations: ["Threat Locker"]
+    weight: 1.0
+    description: "Application allowlisting platform"
+    
+  - keyword: "Digital Guardian"
+    variations: ["DG", "Digital Guardian DLP"]
+    weight: 1.0
+    description: "Data loss prevention"
+    
+  - keyword: "Varonis"
+    variations: ["Varonis Systems"]
+    weight: 1.0
+    description: "Data security platform"
+    
+  - keyword: "Symantec"
+    variations: ["Norton", "Symantec Endpoint Protection"]
+    weight: 1.0
+    description: "Endpoint security solutions"
+
+# Enterprise Tools and Platforms
+enterprise_tools:
+  - keyword: "Moodle"
+    variations: ["Moodle LMS"]
+    weight: 0.8
+    description: "Learning management system"
+    
+  - keyword: "Blockmark Registry"
+    variations: ["Blockmark"]
+    weight: 0.8
+    description: "Registry platform"
+    
+  - keyword: "Pervade Software"
+    variations: ["Pervade"]
+    weight: 0.8
+    description: "Software solutions"
+    
+  - keyword: "Rizikon"
+    variations: []
+    weight: 0.8
+    description: "Risk management platform"
+    
+  - keyword: "Jamf Pro"
+    variations: ["JAMF", "Jamf", "Jamf Software"]
+    weight: 1.0
+    description: "Apple device management"
+    
+  - keyword: "Brevo"
+    variations: ["Sendinblue"]
+    weight: 0.8
+    description: "Email marketing platform"
+    
+  - keyword: "TextLocal"
+    variations: ["Text Local"]
+    weight: 0.8
+    description: "SMS messaging service"
+    
+  - keyword: "Strata Insight"
+    variations: ["Strata"]
+    weight: 0.8
+    description: "Business intelligence platform"
+    
+  - keyword: "Tenable"
+    variations: ["Tenable.io", "Nessus", "Tenable Security Center"]
+    weight: 1.0
+    description: "Vulnerability management"
+    
+  - keyword: "N-able Mail Assure"
+    variations: ["N-able", "Mail Assure", "SolarWinds Mail Assure"]
+    weight: 0.8
+    description: "Email security service"
+    
+  - keyword: "Cylance"
+    variations: ["BlackBerry Cylance", "CylancePROTECT"]
+    weight: 1.0
+    description: "AI-powered endpoint protection"
+    
+  - keyword: "CyberArk"
+    variations: ["Cyber Ark", "CyberArk PAM"]
+    weight: 1.0
+    description: "Privileged access management"
+    
+  - keyword: "Checkpoint Firewall"
+    variations: ["Check Point", "CheckPoint", "CP Firewall"]
+    weight: 1.0
+    description: "Network security firewall"
+    
+  - keyword: "BlackBerry UEM"
+    variations: ["BB UEM", "BlackBerry Enterprise Mobility"]
+    weight: 0.8
+    description: "Unified endpoint management"
+
+# Enterprise Systems
+enterprise_systems:
+  - keyword: "Oracle HCM"
+    variations: ["Oracle Human Capital Management", "Oracle HCM Cloud"]
+    weight: 0.9
+    description: "Human capital management system"
+    
+  - keyword: "Oracle FlexCUBE"
+    variations: ["FlexCube", "FLEXCUBE"]
+    weight: 0.9
+    description: "Banking software platform"
+    
+  - keyword: "Olympic Banking System"
+    variations: ["OBS", "Olympic Banking"]
+    weight: 0.9
+    description: "Core banking system"
+
+# Network Infrastructure
+network_infrastructure:
+  - keyword: "Cisco Nexus9000"
+    variations: ["Nexus 9000", "Cisco Nexus 9K"]
+    weight: 0.9
+    description: "Cisco data center switch"
+    
+  - keyword: "Cisco C3850"
+    variations: ["Catalyst 3850", "C3850 Switch"]
+    weight: 0.9
+    description: "Cisco enterprise switch"
+    
+  - keyword: "Cisco 9300"
+    variations: ["Catalyst 9300", "C9300"]
+    weight: 0.9
+    description: "Cisco enterprise switch"
+
+# Virtualization and VDI
+virtualization:
+  - keyword: "Citrix StoreFront"
+    variations: ["StoreFront", "Citrix Store Front"]
+    weight: 0.9
+    description: "Citrix application delivery"
+    
+  - keyword: "Citrix XenDesktop"
+    variations: ["Xen Desktop", "XenDesktop", "Citrix Virtual Apps"]
+    weight: 0.9
+    description: "Virtual desktop infrastructure"
+    
+  - keyword: "Citrix ADC"
+    variations: ["NetScaler", "Citrix NetScaler", "Application Delivery Controller"]
+    weight: 0.9
+    description: "Application delivery controller"
+    
+  - keyword: "Citrix License Server"
+    variations: ["Citrix Licensing", "License Server"]
+    weight: 0.9
+    description: "Citrix licensing service"
+
+# Specialized Platforms
+specialized_platforms:
+  - keyword: "LexisNexis Risk Solutions"
+    variations: ["LexisNexis", "LN Risk Solutions"]
+    weight: 0.8
+    description: "Risk and compliance platform"
+    
+  - keyword: "Nutanix HCI"
+    variations: ["Nutanix", "Nutanix Hyperconverged", "Nutanix Infrastructure"]
+    weight: 0.9
+    description: "Hyperconverged infrastructure"
+
+# Keyword matching settings
+settings:
+  # Minimum keyword match confidence threshold
+  min_confidence: 0.7
+  
+  # Enable fuzzy matching for keyword variations
+  enable_fuzzy_matching: true
+  
+  # Maximum edit distance for fuzzy matching
+  max_edit_distance: 2
+  
+  # Case sensitivity for matching
+  case_sensitive: false
+  
+  # Word boundary matching (prevents partial matches)
+  word_boundary_matching: true
+  
+  # Context window for keyword extraction (words before/after)
+  context_window: 10
+
+# Keyword categories for reporting and analysis
+categories:
+  critical:
+    - "Azure"
+    - "Microsoft 365"
+    - "Amazon Web Services"
+    - "Fortinet"
+    - "SentinelOne"
+    - "CyberArk"
+    - "Checkpoint Firewall"
+    
+  high:
+    - "Mimecast"
+    - "CloudFlare"
+    - "DarkTrace"
+    - "Jamf Pro"
+    - "Tenable"
+    - "Cylance"
+    
+  medium:
+    - "Digital Guardian"
+    - "Varonis"
+    - "Symantec"
+    - "Oracle HCM"
+    - "Citrix StoreFront"
+    - "Nutanix HCI"
+    
+  low:
+    - "Moodle"
+    - "Brevo"
+    - "TextLocal"
+    - "BlackBerry UEM"

@@ -1,511 +1,409 @@
-# Sentinel: AI-Powered Cybersecurity Intelligence Platform
+# Sentinel Cybersecurity Triage System
 
-## Problem Statement
+Sentinel is an AWS-native, multi-agent cybersecurity news triage and publishing system that autonomously ingests, processes, and publishes cybersecurity intelligence from RSS feeds and news sources. The system reduces analyst workload by automatically deduplicating content, extracting relevant entities, and intelligently routing items for human review or auto-publication.
 
-Security analysts are overwhelmed by the volume of cybersecurity news and threat intelligence from multiple sources. Manual monitoring of 20+ RSS feeds, identifying relevant threats to specific technology stacks, and avoiding duplicate analysis creates significant operational overhead. Organizations need an automated system that can:
-
-- **Ingest** cybersecurity news from multiple RSS feeds automatically
-- **Filter** content for relevance to specific technology stacks and keywords
-- **Deduplicate** similar articles across sources to reduce noise
-- **Triage** content intelligently for auto-publication or human review
-- **Alert** analysts to critical threats requiring immediate attention
-- **Query** historical intelligence using natural language
-
-## Solution Overview
-
-Sentinel is an AWS-native, multi-agent cybersecurity intelligence platform that autonomously processes 21+ RSS feeds, extracts relevant threats, and publishes actionable intelligence. The system reduces analyst workload by 70%+ through intelligent automation while maintaining human oversight for critical decisions.
-
-## Infrastructure Architecture
+## 🏗️ Architecture Overview
 
 ```mermaid
 graph TB
     subgraph "External Sources"
-        RSS[21+ RSS Feeds<br/>CISA, ANSSI, Microsoft, etc.]
+        RSS[RSS Feeds<br/>21+ Configured Sources]
     end
     
     subgraph "AWS Infrastructure"
         subgraph "Orchestration"
             EB[EventBridge<br/>Scheduled Triggers]
-            SF[Step Functions<br/>Workflow Engine]
+            SF[Step Functions<br/>Workflow Orchestration]
         end
         
-        subgraph "Processing Layer"
-            AS[Agent Shim<br/>Orchestration Toggle]
-            FP[Feed Parser]
-            RE[Relevancy Engine]
-            DD[Deduplication]
-            GR[Guardrails]
-            ST[Storage Engine]
+        subgraph "Agent Layer"
+            IA[Ingestor Agent<br/>Strands → Bedrock AgentCore]
+            AA[Analyst Assistant<br/>Strands → Bedrock AgentCore]
         end
         
-        subgraph "AI Layer (Optional)"
-            BC[Bedrock AgentCore<br/>Strands Agents]
-        end
-        
-        subgraph "Data Layer"
-            DDB[(DynamoDB<br/>Articles & Metadata)]
+        subgraph "Storage"
+            DDB[(DynamoDB<br/>Articles, Comments, Memory)]
             OS[(OpenSearch<br/>Vector Search)]
-            S3[(S3<br/>Content Storage)]
+            S3[(S3<br/>Raw Content, Artifacts)]
         end
         
-        subgraph "Interface Layer"
-            AMP[Amplify Web App<br/>React/TypeScript]
-            COG[Cognito Auth]
+        subgraph "Interface"
+            AMP[Amplify Web App]
             API[API Gateway]
-        end
-        
-        subgraph "Notifications"
-            SES[SES Email]
-            SQS[SQS Queues]
         end
     end
     
     RSS --> EB
     EB --> SF
-    SF --> AS
-    AS -.->|enable_agents=false| FP
-    AS -.->|enable_agents=true| BC
-    BC --> FP
-    FP --> RE --> DD --> GR --> ST
-    ST --> DDB
-    DD --> OS
-    ST --> S3
-    AMP --> API --> AS
-    COG --> AMP
-    ST --> SES
+    SF --> IA
+    AA --> API
+    AMP --> API
 ```
 
-## Key Architectural Decisions
+## 🚀 Key Features
 
-### 1. Agent Deferral Strategy
-**Decision**: Deploy core functionality first, add AI agents later
-**Rationale**: 
-- Reduces deployment complexity and risk
-- Validates business logic before adding agent orchestration
-- Enables immediate value delivery
-- Provides fallback option if agents encounter issues
+- **Automated Content Ingestion**: Monitors 21+ RSS feeds from government agencies, security vendors, and news sources
+- **Intelligent Relevance Assessment**: LLM-powered analysis with keyword targeting for your technology stack
+- **Advanced Configuration Management**: Validated YAML configuration with hot-reloading and comprehensive error checking
+- **Smart Keyword Matching**: Exact and fuzzy matching with confidence scoring and context extraction
+- **Advanced Deduplication**: Multi-layered approach combining heuristic and semantic methods
+- **Human-in-the-Loop Workflow**: Smart escalation with review queues and approval workflows
+- **Natural Language Queries**: Chat interface for analysts to query the intelligence database
+- **Comprehensive Reporting**: XLSX export with keyword analysis and hit counts
+- **Multi-Agent Architecture**: Built with Strands and deployed to AWS Bedrock AgentCore
 
-**Implementation**:
-- `enable_agents=false` (default): Step Functions → Lambda tools directly
-- `enable_agents=true` (later): Step Functions → Bedrock AgentCore → Lambda tools
-- Same tool contracts regardless of orchestration method
+## 📋 Prerequisites
 
-### 2. Terraform-First Infrastructure
-**Decision**: Complete infrastructure deployment in single `terraform apply`
-**Rationale**:
-- Infrastructure as Code best practices
-- Reproducible deployments across environments
-- Version-controlled infrastructure changes
-- Simplified disaster recovery
+- **AWS Account** with appropriate permissions
+- **Python 3.9+** for local development
+- **Terraform 1.5+** for infrastructure deployment
+- **Node.js 18+** (for Amplify web application)
+- **AWS CLI** configured with credentials
 
-### 3. Serverless-Native Architecture
-**Decision**: Lambda + managed services over containers/EC2
-**Rationale**:
-- Pay-per-use cost model
-- Automatic scaling and high availability
-- Reduced operational overhead
-- Native AWS service integrations
+## 🛠️ Quick Start
 
-### 4. Multi-Modal Storage Strategy
-**Decision**: DynamoDB + OpenSearch + S3 for different data patterns
-**Rationale**:
-- DynamoDB: Fast key-value access for articles and metadata
-- OpenSearch: Vector similarity search for deduplication
-- S3: Cost-effective storage for raw content and traces
-
-## Technology Stack
-
-### Core Infrastructure
-- **Compute**: AWS Lambda (Python 3.11)
-- **Orchestration**: AWS Step Functions + EventBridge
-- **Storage**: DynamoDB + OpenSearch Serverless + S3
-- **Security**: Cognito + IAM + KMS + VPC Endpoints
-- **Monitoring**: CloudWatch + X-Ray + SNS
-
-### AI/ML Services
-- **LLM**: Amazon Bedrock (Claude 3.5 Sonnet)
-- **Embeddings**: Bedrock Titan Embeddings
-- **Agent Framework**: Strands → Bedrock AgentCore
-- **Vector Search**: OpenSearch k-NN
-
-### Web Application
-- **Frontend**: React 18 + TypeScript
-- **Hosting**: AWS Amplify
-- **API**: API Gateway + Lambda
-- **Authentication**: Cognito User Pools
-
-### DevOps & IaC
-- **Infrastructure**: Terraform 1.5+
-- **CI/CD**: GitHub Actions (or AWS CodePipeline)
-- **State Management**: S3 + DynamoDB locking
-- **Monitoring**: CloudWatch Dashboards + Alarms
-
-### External Integrations
-- **RSS Parsing**: Python feedparser library
-- **Email**: Amazon SES
-- **Content Processing**: BeautifulSoup4, requests
-- **Export**: openpyxl for XLSX reports
-
-## Prerequisites
-
-### AWS Account Setup
-1. **AWS Account** with administrative access
-2. **AWS CLI** configured with appropriate credentials
-3. **Terraform** 1.5+ installed locally
-4. **Python** 3.11+ for Lambda development
-5. **Node.js** 18+ for Amplify frontend
-
-### Required AWS Services
-- Amazon Bedrock (Claude 3.5 Sonnet access)
-- OpenSearch Serverless
-- SES (domain verification for email notifications)
-- Cognito User Pools
-- VPC (for private endpoints)
-
-### Estimated Costs
-- **Development**: ~$50-100/month
-- **Production**: ~$200-500/month (varies with usage)
-- **Primary costs**: Bedrock API calls, OpenSearch storage, Lambda execution
-
-## Step-by-Step Deployment Guide
-
-### Step 1: Clone and Setup Project Structure
+### 1. Clone and Setup
 
 ```bash
-# Clone the repository
 git clone <repository-url>
 cd sentinel-cybersecurity-triage
 
-# Create project structure
-mkdir -p {infra/{modules,envs/{dev,prod}},src/{lambdas,agents,shared},config,docs}
+# Set up Python virtual environment
+./scripts/setup_venv.sh
+source venv/bin/activate
 
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Install Terraform
-# (Follow official Terraform installation guide for your OS)
+# Copy environment configuration
+cp .env.example .env
+# Edit .env with your AWS account details
 ```
 
-### Step 2: Configure AWS Credentials and Region
+### 2. Bootstrap Terraform State
 
 ```bash
-# Configure AWS CLI
-aws configure
-
-# Set your preferred region (recommend us-east-1 for Bedrock availability)
-export AWS_DEFAULT_REGION=us-east-1
-
-# Verify access
-aws sts get-caller-identity
-```
-
-### Step 3: Request Bedrock Model Access
-
-```bash
-# Request access to Claude 3.5 Sonnet in AWS Console
-# Navigate to: Bedrock → Model Access → Request Access
-# Required models:
-# - anthropic.claude-3-5-sonnet-20241022-v2:0
-# - amazon.titan-embed-text-v1
-
-# Verify access
-aws bedrock list-foundation-models --region us-east-1
-```
-
-### Step 4: Setup Terraform Backend
-
-```bash
-# Create S3 bucket for Terraform state
-aws s3 mb s3://sentinel-terraform-state-$(date +%s) --region us-east-1
-
-# Create DynamoDB table for state locking
-aws dynamodb create-table \
-    --table-name sentinel-terraform-locks \
-    --attribute-definitions AttributeName=LockID,AttributeType=S \
-    --key-schema AttributeName=LockID,KeyType=HASH \
-    --billing-mode PAY_PER_REQUEST \
-    --region us-east-1
-
-# Update backend configuration in infra/envs/dev/main.tf
-```
-
-### Step 5: Configure Environment Variables
-
-```bash
-# Create terraform.tfvars file
-cd infra/envs/dev
-cp terraform.tfvars.example terraform.tfvars
-
-# Edit terraform.tfvars with your settings:
-cat > terraform.tfvars << EOF
-# Project Configuration
-project_name = "sentinel"
-environment = "dev"
-aws_region = "us-east-1"
-
-# Feature Flags
-enable_agents = false        # Start with direct Lambda orchestration
-enable_amplify = true
-enable_opensearch = true
-
-# Email Configuration
-ses_verified_email = "your-email@company.com"
-notification_emails = ["security-team@company.com"]
-
-# RSS Feed Configuration
-rss_feeds_config_path = "../../../config/feeds.json"
-keywords_config_path = "../../../config/keywords.json"
-
-# Resource Configuration
-lambda_memory_size = 512
-lambda_timeout = 300
-opensearch_instance_type = "search.t3.small.search"
-EOF
-```
-
-### Step 6: Configure RSS Feeds and Keywords
-
-```bash
-# Create RSS feeds configuration
-cat > config/feeds.json << EOF
-{
-  "feeds": [
-    {
-      "name": "CISA Advisories",
-      "url": "https://www.cisa.gov/cybersecurity-advisories/all.xml",
-      "category": "Advisories",
-      "enabled": true,
-      "fetch_interval": "1h"
-    },
-    {
-      "name": "Microsoft Security",
-      "url": "https://www.microsoft.com/en-us/security/blog/feed/",
-      "category": "Vendor",
-      "enabled": true,
-      "fetch_interval": "2h"
-    },
-    {
-      "name": "SANS ISC",
-      "url": "https://isc.sans.edu/rssfeed.xml",
-      "category": "Research",
-      "enabled": true,
-      "fetch_interval": "4h"
-    }
-  ]
-}
-EOF
-
-# Create keywords configuration
-cat > config/keywords.json << EOF
-{
-  "cloud_platforms": [
-    "Azure", "Entra", "Microsoft 365", "Office 365",
-    "AWS", "Amazon Web Services", "EC2", "S3",
-    "Google Workspace", "Google Cloud", "GCP"
-  ],
-  "security_vendors": [
-    "Mimecast", "Fortinet", "CloudFlare", "Cloudflare",
-    "DarkTrace", "SentinelOne", "CrowdStrike", "Symantec"
-  ],
-  "enterprise_tools": [
-    "Jamf Pro", "Tenable", "CyberArk", "Checkpoint",
-    "Cisco", "Citrix", "Oracle", "SAP"
-  ]
-}
-EOF
-```
-
-### Step 7: Deploy Infrastructure
-
-```bash
-# Initialize Terraform
-cd infra/envs/dev
+cd infra/bootstrap
 terraform init
+terraform apply
 
-# Plan deployment (review all resources)
+# Note the outputs for backend configuration
+```
+
+### 3. Configure Backend
+
+```bash
+cd ../
+# Configure backend with outputs from bootstrap
+terraform init -backend-config="bucket=<state-bucket-name>" \
+               -backend-config="dynamodb_table=<locks-table-name>"
+```
+
+### 4. Deploy Infrastructure
+
+```bash
+# Development environment
+cd envs/dev
+terraform init
 terraform plan -var-file="terraform.tfvars"
-
-# Deploy infrastructure (this will take 15-20 minutes)
 terraform apply -var-file="terraform.tfvars"
 
-# Save important outputs
-terraform output > deployment-outputs.txt
-```
-
-### Step 8: Verify Core Services
-
-```bash
-# Test DynamoDB tables
-aws dynamodb list-tables --region us-east-1
-
-# Test OpenSearch collection
-aws opensearchserverless list-collections --region us-east-1
-
-# Test S3 buckets
-aws s3 ls | grep sentinel
-
-# Test Lambda functions
-aws lambda list-functions --region us-east-1 | grep sentinel
-```
-
-### Step 9: Configure SES Email Verification
-
-```bash
-# Verify your email address for SES
-aws ses verify-email-identity --email-address your-email@company.com --region us-east-1
-
-# Check verification status
-aws ses get-identity-verification-attributes --identities your-email@company.com --region us-east-1
-
-# Note: To send to external emails, request SES sandbox removal via AWS Support
-```
-
-### Step 10: Deploy and Test Web Application
-
-```bash
-# Get Amplify app URL from Terraform output
-AMPLIFY_URL=$(terraform output -raw amplify_app_url)
-echo "Web application available at: $AMPLIFY_URL"
-
-# Test authentication
-# 1. Navigate to the Amplify URL
-# 2. Create a test user account
-# 3. Verify email and login
-```
-
-### Step 11: Test End-to-End Pipeline
-
-```bash
-# Trigger manual ingestion test
-aws stepfunctions start-execution \
-    --state-machine-arn $(terraform output -raw step_function_arn) \
-    --input '{"test": true}' \
-    --region us-east-1
-
-# Monitor execution
-aws stepfunctions describe-execution \
-    --execution-arn <execution-arn> \
-    --region us-east-1
-
-# Check CloudWatch logs
-aws logs describe-log-groups --log-group-name-prefix "/aws/lambda/sentinel" --region us-east-1
-```
-
-### Step 12: Enable AI Agents (Optional)
-
-```bash
-# When ready to add AI agents, update feature flag
-terraform apply -var="enable_agents=true" -var-file="terraform.tfvars"
-
-# Deploy Strands agents to Bedrock AgentCore
-# (Follow Task 8.2 implementation for detailed steps)
-```
-
-## Configuration Management
-
-### Adding New RSS Feeds
-
-1. Edit `config/feeds.json`:
-```json
-{
-  "name": "New Security Blog",
-  "url": "https://example.com/security/feed.xml",
-  "category": "News",
-  "enabled": true,
-  "fetch_interval": "2h"
-}
-```
-
-2. No redeployment needed - configuration reloads automatically
-
-### Updating Target Keywords
-
-1. Edit `config/keywords.json` to add new technologies
-2. Keywords are reloaded on next ingestion cycle
-3. Monitor keyword hit rates in CloudWatch dashboards
-
-### Managing Email Recipients
-
-1. Add new SES verified identities:
-```bash
-aws ses verify-email-identity --email-address new-analyst@company.com
-```
-
-2. Update notification groups in `config/notifications.json`
-
-### Monitoring and Alerting
-
-Access CloudWatch dashboards:
-- **Ingestion Metrics**: Feed success rates, processing times
-- **Relevancy Metrics**: Keyword hit rates, auto-publish ratios
-- **System Health**: Lambda errors, DLQ messages, costs
-
-## Troubleshooting
-
-### Common Issues
-
-**1. Bedrock Access Denied**
-```bash
-# Verify model access granted
-aws bedrock list-foundation-models --region us-east-1
-# Request access in AWS Console if needed
-```
-
-**2. SES Email Not Sending**
-```bash
-# Check SES sandbox status
-aws ses get-send-quota --region us-east-1
-# Request production access via AWS Support
-```
-
-**3. Lambda Timeout Errors**
-```bash
-# Increase timeout in terraform.tfvars
-lambda_timeout = 600  # 10 minutes
+# Production environment (when ready)
+cd ../prod
+terraform init
+terraform plan -var-file="terraform.tfvars"
 terraform apply -var-file="terraform.tfvars"
 ```
 
-**4. OpenSearch Connection Issues**
+### 5. Configure RSS Feeds and Keywords
+
+Update the configuration files with your specific requirements:
+
+- `config/feeds.yaml` - RSS feed sources and categories
+- `config/keywords.yaml` - Target keywords for your technology stack
+- `config/feature_flags.yaml` - Feature toggles for gradual rollout
+
+**Test Configuration Loading:**
+
 ```bash
-# Verify VPC endpoints are created
-aws ec2 describe-vpc-endpoints --region us-east-1
+# Test the configuration system
+python3 -c "
+from src.shared.config_loader import FeedConfigLoader, KeywordManager
+
+# Test feed configuration
+feed_loader = FeedConfigLoader()
+config = feed_loader.load_config()
+print(f'✓ Loaded {len(config.feeds)} RSS feeds')
+
+# Test keyword configuration  
+keyword_manager = KeywordManager()
+keyword_config = keyword_manager.load_config()
+keywords = keyword_manager.get_all_keywords()
+print(f'✓ Loaded {len(keywords)} keywords with fuzzy matching')
+
+# Test keyword matching
+sample_text = 'Microsoft Azure vulnerability affects Office 365 users'
+matches = keyword_manager.match_keywords(sample_text)
+print(f'✓ Found {len(matches)} keyword matches in sample text')
+"
 ```
 
-### Getting Help
+## 📁 Project Structure
 
-- **CloudWatch Logs**: Check `/aws/lambda/sentinel-*` log groups
-- **X-Ray Traces**: View end-to-end request traces
-- **Step Functions**: Monitor workflow execution history
-- **Cost Explorer**: Track spending by service
+```
+sentinel-cybersecurity-triage/
+├── infra/                          # Terraform infrastructure
+│   ├── modules/                    # Reusable Terraform modules
+│   ├── envs/                       # Environment-specific configurations
+│   │   ├── dev/                    # Development environment
+│   │   └── prod/                   # Production environment
+│   ├── bootstrap/                  # Terraform state backend setup
+│   └── *.tf                        # Main Terraform configuration
+├── src/                            # Source code
+│   ├── lambda_tools/               # Lambda function implementations
+│   └── shared/                     # Shared utilities and data models
+│       ├── __init__.py             # Package initialization
+│       ├── models.py               # Pydantic data models and schemas
+│       ├── config.py               # Configuration constants and settings
+│       ├── config_loader.py        # Configuration loaders with validation
+│       └── keyword_manager.py      # Keyword matching and management
+├── config/                         # Configuration files
+│   ├── feeds.yaml                  # RSS feed configuration
+│   ├── keywords.yaml               # Target keywords configuration
+│   └── feature_flags.yaml          # Feature flags for rollout
+├── tests/                          # Test files
+├── scripts/                        # Deployment and utility scripts
+├── docs/                           # Documentation
+└── requirements.txt                # Python dependencies
+```
 
-## Security Considerations
+## 🔧 Configuration
 
-- **Encryption**: All data encrypted at rest (KMS) and in transit (TLS)
-- **Network**: Private VPC endpoints for Bedrock and OpenSearch
-- **Access**: Least-privilege IAM roles for all services
-- **Authentication**: Cognito with MFA recommended for production
-- **Monitoring**: CloudTrail enabled for all API calls
+The system uses a comprehensive configuration management system with validation and hot-reloading capabilities.
 
-## Cost Optimization
+### RSS Feeds Configuration
 
-- **Lambda**: Right-size memory allocation based on usage patterns
-- **OpenSearch**: Use reserved instances for predictable workloads
-- **S3**: Lifecycle policies for automatic archival
-- **Bedrock**: Monitor token usage and implement caching
-- **DynamoDB**: On-demand billing for variable workloads
+The system monitors 21+ RSS feeds from government agencies, security vendors, and news sources. Feed configuration is managed through `config/feeds.yaml` with full validation and categorization.
 
-## Next Steps
+**Supported Feed Categories:**
+- **Advisories**: Official security advisories from government agencies
+- **Alerts**: Urgent security alerts and warnings  
+- **Vulnerabilities**: CVE disclosures and vulnerability information
+- **Vendor**: Security updates from technology vendors
+- **Threat Intel**: Threat intelligence and analysis reports
+- **Research**: Security research and technical analysis
+- **News**: General cybersecurity news and updates
+- **Data Breach**: Data breach notifications and reports
+- **Policy**: Cybersecurity policy and regulatory updates
 
-1. **Monitor Performance**: Review CloudWatch metrics after 1 week
-2. **Tune Relevancy**: Adjust keyword lists based on hit rates
-3. **Scale Feeds**: Add more RSS sources as needed
-4. **Enable Agents**: Deploy Bedrock AgentCore when ready
-5. **Production Hardening**: Implement backup, disaster recovery
+**Example Feed Configuration:**
 
-## Contributing
+```yaml
+feeds:
+  - name: "CISA Known Exploited Vulnerabilities"
+    url: "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.xml"
+    category: "Vulnerabilities"
+    enabled: true
+    fetch_interval: "30m"
+    description: "CISA KEV catalog feed"
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and contribution process.
+  - name: "Microsoft Security Response Center"
+    url: "https://msrc.microsoft.com/blog/feed"
+    category: "Vendor"
+    enabled: true
+    fetch_interval: "2h"
+    description: "Microsoft security updates and advisories"
+```
 
-## License
+**Feed Management Features:**
+- URL format validation (HTTP/HTTPS only)
+- Fetch interval validation (supports s/m/h/d units)
+- Category validation against predefined enums
+- Duplicate feed name detection
+- Enable/disable individual feeds
+- Automatic configuration reloading
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
+### Target Keywords Configuration
+
+The keyword management system provides intelligent relevance assessment with exact and fuzzy matching capabilities. Configure your technology stack keywords in `config/keywords.yaml`.
+
+**Keyword Categories:**
+- `cloud_platforms`: Azure, AWS, Google Cloud, etc.
+- `security_vendors`: Mimecast, Fortinet, CrowdStrike, etc.
+- `enterprise_tools`: Jamf Pro, Tenable, CyberArk, etc.
+- `enterprise_systems`: Oracle HCM, FlexCUBE, etc.
+- `network_infrastructure`: Cisco devices, switches, etc.
+- `virtualization`: Citrix, VMware products, etc.
+- `specialized_platforms`: Custom business applications
+
+**Example Keyword Configuration:**
+
+```yaml
+cloud_platforms:
+  - keyword: "Azure"
+    variations: ["Microsoft Azure", "Azure AD", "Azure Active Directory"]
+    weight: 1.0
+    description: "Microsoft Azure cloud platform"
+
+security_vendors:
+  - keyword: "Mimecast"
+    variations: ["Mimecast Email Security"]
+    weight: 1.0
+    description: "Email security platform"
+
+# Keyword matching settings
+settings:
+  min_confidence: 0.7
+  enable_fuzzy_matching: true
+  max_edit_distance: 2
+  case_sensitive: false
+  word_boundary_matching: true
+  context_window: 10
+
+# Priority categories for reporting
+categories:
+  critical: ["Azure", "Microsoft 365", "Amazon Web Services"]
+  high: ["Mimecast", "Fortinet", "SentinelOne"]
+  medium: ["Jamf Pro", "Tenable", "Oracle HCM"]
+  low: ["Moodle", "Brevo", "TextLocal"]
+```
+
+**Keyword Matching Features:**
+- **Exact Matching**: Direct keyword and variation matching
+- **Fuzzy Matching**: Levenshtein distance-based similarity matching
+- **Context Extraction**: Captures surrounding text for analysis
+- **Confidence Scoring**: Weighted relevance scoring
+- **Priority Classification**: Critical/High/Medium/Low categorization
+- **Performance Optimization**: Indexed lookups for fast matching
+
+### Configuration Management API
+
+The system provides programmatic access to configuration through dedicated loader classes:
+
+```python
+from src.shared.config_loader import FeedConfigLoader, KeywordManager
+
+# Load and validate feed configuration
+feed_loader = FeedConfigLoader("config/feeds.yaml")
+config = feed_loader.load_config()
+
+# Get feeds by category
+news_feeds = feed_loader.get_feeds_by_category(FeedCategory.NEWS)
+enabled_feeds = feed_loader.get_enabled_feeds()
+
+# Validate configuration
+issues = feed_loader.validate_all_feeds()
+
+# Load keyword configuration with fuzzy matching
+keyword_manager = KeywordManager("config/keywords.yaml")
+keyword_config = keyword_manager.load_config()
+
+# Find keyword matches in text
+text = "Microsoft Azure vulnerability affects Office 365 users"
+matches = keyword_manager.match_keywords(text, include_fuzzy=True)
+
+# Get keywords by priority
+critical_keywords = keyword_manager.get_critical_keywords()
+```
+
+### Feature Flags
+
+Control system capabilities with feature flags in `config/feature_flags.yaml`:
+
+```yaml
+enable_agents: false              # Start with direct Lambda orchestration
+enable_amplify: false            # Enable web app when ready
+enable_opensearch: false         # Enable vector search when ready
+enable_auto_publish: false       # Require human review initially
+```
+
+## 🎯 Gradual Rollout Strategy
+
+Sentinel is designed for gradual rollout with feature flags:
+
+1. **Phase 1**: Direct Lambda orchestration (`enable_agents: false`)
+2. **Phase 2**: Enable Bedrock AgentCore integration (`enable_agents: true`)
+3. **Phase 3**: Enable web application (`enable_amplify: true`)
+4. **Phase 4**: Enable vector search (`enable_opensearch: true`)
+5. **Phase 5**: Enable auto-publishing (`enable_auto_publish: true`)
+
+## 📊 Monitoring and Observability
+
+- **CloudWatch Dashboards**: System metrics, ingestion rates, relevancy rates
+- **X-Ray Tracing**: End-to-end request tracing with correlation IDs
+- **Cost Tracking**: Daily and monthly cost monitoring with alerts
+- **Performance Metrics**: Processing latency, deduplication accuracy
+- **Quality Metrics**: Keyword hit rates, human review ratios
+
+## 🔐 Security Features
+
+- **Encryption at Rest**: KMS encryption for S3, DynamoDB, and OpenSearch
+- **VPC Endpoints**: Private communication with AWS services
+- **IAM Least Privilege**: Scoped permissions for each component
+- **PII Detection**: Automatic detection and redaction of sensitive data
+- **Audit Trails**: Complete decision traces with tool calls and rationales
+
+## 🧪 Testing
+
+The project includes comprehensive unit tests for configuration management and keyword matching:
+
+```bash
+# Run all tests
+pytest tests/
+
+# Run specific test modules
+pytest tests/test_config_loader.py -v
+
+# Run tests with coverage reporting
+pytest --cov=src --cov-report=html tests/
+
+# Run tests for specific functionality
+pytest tests/test_config_loader.py::TestFeedConfigLoader::test_load_valid_config -v
+pytest tests/test_config_loader.py::TestKeywordManager::test_find_fuzzy_matches -v
+
+# Lint and format code
+black src/ tests/
+isort src/ tests/
+flake8 src/ tests/
+mypy src/
+```
+
+**Test Coverage Includes:**
+- **Feed Configuration**: Loading, validation, URL checking, interval parsing
+- **Keyword Management**: Exact matching, fuzzy matching, confidence scoring
+- **Configuration Validation**: Duplicate detection, format validation, error handling
+- **Edge Cases**: Invalid URLs, malformed YAML, missing files, encoding issues
+- **Performance**: Levenshtein distance calculation, indexed lookups
+
+## 📚 Documentation
+
+- [Requirements Document](.kiro/specs/sentinel-cybersecurity-triage/requirements.md)
+- [Design Document](.kiro/specs/sentinel-cybersecurity-triage/design.md)
+- [Implementation Tasks](.kiro/specs/sentinel-cybersecurity-triage/tasks.md)
+- [Configuration Examples](docs/configuration_examples.md) - Comprehensive examples of using the configuration system
+- [API Documentation](docs/api.md)
+- [Deployment Guide](docs/deployment.md)
+- [Operations Runbook](docs/operations.md)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+For support and questions:
+
+- Create an issue in the repository
+- Contact the security team at security-team@company.com
+- Check the [troubleshooting guide](docs/troubleshooting.md)
+
+## 🏷️ Version
+
+Current version: 0.1.0
+
+See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
