@@ -1,0 +1,248 @@
+# Performance Testing Configuration for Sentinel
+
+# Test Environment Settings
+environment:
+  name: "development"
+  host: "http://localhost:3000"
+  api_base_url: "http://localhost:3000/api"
+  websocket_url: "ws://localhost:3000/ws"
+
+# Load Test Configuration
+load_tests:
+  # Basic load test settings
+  basic:
+    users: 50
+    spawn_rate: 5
+    duration: "5m"
+    ramp_up_time: "1m"
+  
+  # Stress test settings
+  stress:
+    users: 200
+    spawn_rate: 20
+    duration: "10m"
+    ramp_up_time: "2m"
+  
+  # Volume test settings
+  volume:
+    users: 100
+    spawn_rate: 10
+    duration: "30m"
+    ramp_up_time: "5m"
+  
+  # Spike test settings
+  spike:
+    users: 500
+    spawn_rate: 50
+    duration: "2m"
+    ramp_up_time: "30s"
+
+# Performance Thresholds
+thresholds:
+  # Response time thresholds (milliseconds)
+  response_time:
+    p50: 500      # 50th percentile
+    p95: 2000     # 95th percentile
+    p99: 5000     # 99th percentile
+    max: 10000    # Maximum acceptable
+  
+  # Error rate thresholds (percentage)
+  error_rate:
+    warning: 1.0   # 1% warning threshold
+    critical: 5.0  # 5% critical threshold
+  
+  # Throughput thresholds (requests per second)
+  throughput:
+    min_rps: 100          # Minimum requests per second
+    target_rps: 500       # Target requests per second
+    max_rps: 1000         # Maximum sustainable RPS
+  
+  # System resource thresholds
+  system_resources:
+    cpu_percent: 80       # Maximum CPU utilization
+    memory_percent: 85    # Maximum memory utilization
+    disk_percent: 90      # Maximum disk utilization
+    memory_mb: 512        # Maximum memory per Lambda function
+
+# Test Data Configuration
+test_data:
+  # Article generation settings
+  articles:
+    small_batch: 100
+    medium_batch: 1000
+    large_batch: 10000
+    content_size_words: 200
+  
+  # Feed simulation settings
+  feeds:
+    feed_count: 21
+    articles_per_feed: 50
+    processing_delay_ms: 100
+  
+  # User simulation settings
+  users:
+    concurrent_sessions: 100
+    queries_per_session: 10
+    think_time_seconds: 2
+
+# Monitoring Configuration
+monitoring:
+  # System metrics collection
+  system_metrics:
+    enabled: true
+    interval_seconds: 5
+    duration_seconds: 300
+    metrics:
+      - cpu_percent
+      - memory_percent
+      - disk_io
+      - network_io
+      - process_count
+  
+  # Application metrics
+  application_metrics:
+    enabled: true
+    custom_metrics:
+      - request_duration
+      - database_query_time
+      - cache_hit_rate
+      - queue_depth
+      - error_count
+
+# Test Scenarios
+scenarios:
+  # Feed ingestion performance
+  feed_ingestion:
+    name: "RSS Feed Ingestion Load Test"
+    description: "Test high-volume RSS feed processing"
+    duration: "10m"
+    parameters:
+      concurrent_feeds: 50
+      articles_per_feed: 100
+      processing_threads: 10
+  
+  # Web application load
+  web_application:
+    name: "Web Application User Load Test"
+    description: "Test concurrent user interactions"
+    duration: "15m"
+    parameters:
+      concurrent_users: 100
+      user_types:
+        - type: "regular_user"
+          weight: 80
+          actions: ["search", "view_dashboard", "view_article"]
+        - type: "admin_user"
+          weight: 20
+          actions: ["admin_dashboard", "manage_feeds", "bulk_operations"]
+  
+  # API endpoint stress
+  api_stress:
+    name: "API Endpoint Stress Test"
+    description: "Test API endpoints under high load"
+    duration: "5m"
+    parameters:
+      requests_per_second: 1000
+      endpoints:
+        - path: "/api/articles/search"
+          weight: 40
+          method: "POST"
+        - path: "/api/dashboard"
+          weight: 30
+          method: "GET"
+        - path: "/api/articles/{id}"
+          weight: 20
+          method: "GET"
+        - path: "/api/reports/generate"
+          weight: 10
+          method: "POST"
+  
+  # Database performance
+  database_load:
+    name: "Database Load Test"
+    description: "Test database performance under load"
+    duration: "20m"
+    parameters:
+      concurrent_operations: 200
+      operation_types:
+        - type: "read"
+          weight: 70
+        - type: "write"
+          weight: 25
+        - type: "update"
+          weight: 5
+
+# Reporting Configuration
+reporting:
+  # Output formats
+  formats:
+    - html
+    - json
+    - csv
+    - junit_xml
+  
+  # Report sections
+  sections:
+    - summary
+    - response_times
+    - error_analysis
+    - throughput_analysis
+    - resource_utilization
+    - recommendations
+  
+  # Comparison baselines
+  baselines:
+    enabled: true
+    baseline_file: "tests/performance/baselines/baseline_metrics.json"
+    tolerance_percent: 10  # Allow 10% deviation from baseline
+
+# CI/CD Integration
+ci_cd:
+  # Performance gates
+  gates:
+    enabled: true
+    fail_on_threshold_breach: true
+    warning_on_degradation: true
+  
+  # Automated test execution
+  automation:
+    schedule: "nightly"
+    environments: ["staging", "production"]
+    notification_channels: ["slack", "email"]
+
+# AWS-Specific Configuration
+aws:
+  # Lambda performance testing
+  lambda:
+    memory_sizes: [128, 256, 512, 1024]  # MB
+    timeout_seconds: 300
+    concurrent_executions: 1000
+  
+  # DynamoDB performance
+  dynamodb:
+    read_capacity_units: 100
+    write_capacity_units: 100
+    auto_scaling: true
+  
+  # S3 performance
+  s3:
+    multipart_threshold_mb: 64
+    max_concurrency: 10
+    transfer_config:
+      multipart_threshold: 67108864  # 64MB
+      max_concurrency: 10
+      multipart_chunksize: 8388608   # 8MB
+
+# Security Testing
+security:
+  # Rate limiting tests
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 1000
+    burst_size: 100
+  
+  # Authentication load
+  authentication:
+    concurrent_logins: 50
+    session_duration_minutes: 30
+    token_refresh_interval_minutes: 15

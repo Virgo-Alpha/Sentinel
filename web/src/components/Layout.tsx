@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AuthUser } from 'aws-amplify/auth';
+import { useUserGroups, formatUserRole } from '../utils/auth';
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
@@ -29,15 +30,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, signOut }) => {
 
   const isCurrentPath = (path: string) => location.pathname === path;
 
-  const getUserGroups = () => {
-    if (!user?.signInDetails?.loginId) return [];
-    // In a real implementation, you would extract groups from the JWT token
-    // For now, we'll assume all users are analysts
-    return ['Analysts'];
-  };
-
-  const userGroups = getUserGroups();
-  const isAdmin = userGroups.includes('Admins');
+  const { groups: userGroups } = useUserGroups(user);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -134,7 +127,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, signOut }) => {
                       {user?.signInDetails?.loginId || 'User'}
                     </div>
                     <div className="text-gray-500">
-                      {userGroups.join(', ') || 'Analyst'}
+                      {formatUserRole(userGroups)}
                     </div>
                   </div>
                 </div>

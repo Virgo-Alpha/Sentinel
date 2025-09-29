@@ -1,0 +1,102 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "ProjectName",
+    "ParameterValue": "sentinel"
+  },
+  {
+    "ParameterKey": "EnableAgents",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "EnableAmplify",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "EnableOpenSearch",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "EnableEmailNotifications",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "CreateVPC",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "VpcCidr",
+    "ParameterValue": "10.0.0.0/16"
+  },
+  {
+    "ParameterKey": "LambdaMemorySize",
+    "ParameterValue": "256"
+  },
+  {
+    "ParameterKey": "LambdaTimeout",
+    "ParameterValue": "300"
+  },
+  {
+    "ParameterKey": "DynamoDBBillingMode",
+    "ParameterValue": "PAY_PER_REQUEST"
+  },
+  {
+    "ParameterKey": "SESenderEmail",
+    "ParameterValue": "noreply@sentinel-dev.local"
+  },
+  {
+    "ParameterKey": "EscalationEmails",
+    "ParameterValue": "dev-team@example.com"
+  },
+  {
+    "ParameterKey": "AlertEmails",
+    "ParameterValue": "dev-alerts@example.com"
+  },
+  {
+    "ParameterKey": "MaxConcurrentFeeds",
+    "ParameterValue": "5"
+  },
+  {
+    "ParameterKey": "ContentRetentionDays",
+    "ParameterValue": "90"
+  },
+  {
+    "ParameterKey": "RelevanceThreshold",
+    "ParameterValue": "0.6"
+  },
+  {
+    "ParameterKey": "SimilarityThreshold",
+    "ParameterValue": "0.85"
+  },
+  {
+    "ParameterKey": "ConfidenceThreshold",
+    "ParameterValue": "0.8"
+  },
+  {
+    "ParameterKey": "MaxDailyLLMCalls",
+    "ParameterValue": "1000"
+  },
+  {
+    "ParameterKey": "MaxMonthlyCostUSD",
+    "ParameterValue": "500.0"
+  },
+  {
+    "ParameterKey": "BedrockModelId",
+    "ParameterValue": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+  },
+  {
+    "ParameterKey": "BedrockEmbeddingModel",
+    "ParameterValue": "amazon.titan-embed-text-v1"
+  },
+  {
+    "ParameterKey": "EnableXRayTracing",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "LogRetentionDays",
+    "ParameterValue": "7"
+  }
+]

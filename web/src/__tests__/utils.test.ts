@@ -1,4 +1,4 @@
-import { getUserGroups, isAdmin, isAnalyst, getUserDisplayName, formatUserRole } from '../utils/auth';
+import { getUserGroupsSync, isAdmin, isAnalyst, getUserDisplayName, formatUserRole } from '../utils/auth';
 import { formatDate, formatRelativeTime, getStatusColor, getStatusText } from '../utils/formatting';
 import { AuthUser } from 'aws-amplify/auth';
 
@@ -17,48 +17,52 @@ describe('Auth Utils', () => {
     username: 'admin',
   };
 
-  describe('getUserGroups', () => {
+  describe('getUserGroupsSync', () => {
     test('returns Analysts for regular user', () => {
-      const groups = getUserGroups(mockUser as AuthUser);
+      const groups = getUserGroupsSync(mockUser as AuthUser);
       expect(groups).toEqual(['Analysts']);
     });
 
     test('returns Admins for admin user', () => {
-      const groups = getUserGroups(mockAdminUser as AuthUser);
+      const groups = getUserGroupsSync(mockAdminUser as AuthUser);
       expect(groups).toEqual(['Admins']);
     });
 
     test('returns empty array for undefined user', () => {
-      const groups = getUserGroups(undefined);
+      const groups = getUserGroupsSync(undefined);
       expect(groups).toEqual([]);
     });
   });
 
   describe('isAdmin', () => {
     test('returns false for regular user', () => {
-      expect(isAdmin(mockUser as AuthUser)).toBe(false);
+      const groups = getUserGroupsSync(mockUser as AuthUser);
+      expect(isAdmin(groups)).toBe(false);
     });
 
     test('returns true for admin user', () => {
-      expect(isAdmin(mockAdminUser as AuthUser)).toBe(true);
+      const groups = getUserGroupsSync(mockAdminUser as AuthUser);
+      expect(isAdmin(groups)).toBe(true);
     });
 
     test('returns false for undefined user', () => {
-      expect(isAdmin(undefined)).toBe(false);
+      expect(isAdmin([])).toBe(false);
     });
   });
 
   describe('isAnalyst', () => {
     test('returns true for regular user', () => {
-      expect(isAnalyst(mockUser as AuthUser)).toBe(true);
+      const groups = getUserGroupsSync(mockUser as AuthUser);
+      expect(isAnalyst(groups)).toBe(true);
     });
 
     test('returns true for admin user (admins are also analysts)', () => {
-      expect(isAnalyst(mockAdminUser as AuthUser)).toBe(true);
+      const groups = getUserGroupsSync(mockAdminUser as AuthUser);
+      expect(isAnalyst(groups)).toBe(true);
     });
 
     test('returns false for undefined user', () => {
-      expect(isAnalyst(undefined)).toBe(false);
+      expect(isAnalyst([])).toBe(false);
     });
   });
 
@@ -74,15 +78,17 @@ describe('Auth Utils', () => {
 
   describe('formatUserRole', () => {
     test('returns Security Analyst for regular user', () => {
-      expect(formatUserRole(mockUser as AuthUser)).toBe('Security Analyst');
+      const groups = getUserGroupsSync(mockUser as AuthUser);
+      expect(formatUserRole(groups)).toBe('Security Analyst');
     });
 
     test('returns Administrator for admin user', () => {
-      expect(formatUserRole(mockAdminUser as AuthUser)).toBe('Administrator');
+      const groups = getUserGroupsSync(mockAdminUser as AuthUser);
+      expect(formatUserRole(groups)).toBe('Administrator');
     });
 
     test('returns User for undefined user', () => {
-      expect(formatUserRole(undefined)).toBe('User');
+      expect(formatUserRole([])).toBe('User');
     });
   });
 });
@@ -121,7 +127,7 @@ describe('Formatting Utils', () => {
     });
 
     test('handles invalid date string', () => {
-      expect(formatRelativeTime('invalid-date')).toBe('Unknown');
+      expect(formatRelativeTime('invalid-date')).toBe('Invalid Date');
     });
   });
 

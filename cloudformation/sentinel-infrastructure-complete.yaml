@@ -1,0 +1,674 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Sentinel Cybersecurity Triage Platform - Complete Infrastructure Stack'
+
+Parameters:
+  # Environment Configuration
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name for resource naming and configuration
+  
+  ProjectName:
+    Type: String
+    Default: sentinel
+    Description: Project name for resource naming
+  
+  # Feature Flags
+  EnableAgents:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Enable Bedrock AgentCore integration
+  
+  EnableAmplify:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Enable Amplify web application
+  
+  EnableOpenSearch:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Enable OpenSearch Serverless for vector search
+  
+  EnableEmailNotifications:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Enable email notifications via SES
+  
+  # Network Configuration
+  CreateVPC:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Create a new VPC for the deployment
+  
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for VPC
+  
+  # Lambda Configuration
+  LambdaMemorySize:
+    Type: Number
+    Default: 512
+    MinValue: 128
+    MaxValue: 10240
+    Description: Memory size for Lambda functions (MB)
+  
+  LambdaTimeout:
+    Type: Number
+    Default: 300
+    MinValue: 1
+    MaxValue: 900
+    Description: Timeout for Lambda functions (seconds)
+  
+  # DynamoDB Configuration
+  DynamoDBBillingMode:
+    Type: String
+    Default: PAY_PER_REQUEST
+    AllowedValues: [PAY_PER_REQUEST, PROVISIONED]
+    Description: DynamoDB billing mode
+  
+  # Notification Configuration
+  SESenderEmail:
+    Type: String
+    Default: noreply@sentinel.local
+    Description: SES sender email address
+  
+  EscalationEmails:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: Email addresses for escalation notifications
+  
+  AlertEmails:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: Email addresses for alert notifications
+  
+  # Processing Configuration
+  MaxConcurrentFeeds:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 50
+    Description: Maximum number of feeds to process concurrently
+  
+  ContentRetentionDays:
+    Type: Number
+    Default: 365
+    MinValue: 30
+    MaxValue: 2555
+    Description: Number of days to retain content in S3
+  
+  # Thresholds
+  RelevanceThreshold:
+    Type: Number
+    Default: 0.7
+    MinValue: 0.0
+    MaxValue: 1.0
+    Description: Minimum relevance score for article consideration
+  
+  SimilarityThreshold:
+    Type: Number
+    Default: 0.85
+    MinValue: 0.0
+    MaxValue: 1.0
+    Description: Minimum similarity score for duplicate detection
+  
+  ConfidenceThreshold:
+    Type: Number
+    Default: 0.8
+    MinValue: 0.0
+    MaxValue: 1.0
+    Description: Minimum confidence score for auto-actions
+  
+  # Cost Controls
+  MaxDailyLLMCalls:
+    Type: Number
+    Default: 10000
+    MinValue: 100
+    MaxValue: 100000
+    Description: Maximum LLM API calls per day
+  
+  MaxMonthlyCostUSD:
+    Type: Number
+    Default: 1000.0
+    MinValue: 50.0
+    MaxValue: 50000.0
+    Description: Maximum monthly AWS costs (USD)
+  
+  # Bedrock Configuration
+  BedrockModelId:
+    Type: String
+    Default: anthropic.claude-3-5-sonnet-20241022-v2:0
+    Description: Bedrock model ID for LLM operations
+  
+  BedrockEmbeddingModel:
+    Type: String
+    Default: amazon.titan-embed-text-v1
+    Description: Bedrock model ID for embeddings
+  
+  # Monitoring Configuration
+  EnableXRayTracing:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Enable X-Ray tracing for Lambda functions
+  
+  LogRetentionDays:
+    Type: Number
+    Default: 30
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
+    Description: CloudWatch log retention in days
+
+Conditions:
+  CreateVPCCondition: !Equals [!Ref CreateVPC, 'true']
+  EnableOpenSearchCondition: !Equals [!Ref EnableOpenSearch, 'true']
+  EnableAmplifyCondition: !Equals [!Ref EnableAmplify, 'true']
+  EnableEmailNotificationsCondition: !Equals [!Ref EnableEmailNotifications, 'true']
+  EnableAgentsCondition: !Equals [!Ref EnableAgents, 'true']
+  EnableXRayTracingCondition: !Equals [!Ref EnableXRayTracing, 'true']
+
+Resources:
+  # Random Suffix for Unique Resource Naming
+  RandomSuffix:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt RandomSuffixFunction.Arn
+  
+  RandomSuffixFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-random-suffix'
+      Runtime: python3.11
+      Handler: index.handler
+      Role: !GetAtt RandomSuffixRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import random
+          import string
+          import cfnresponse
+          
+          def handler(event, context):
+              try:
+                  if event['RequestType'] == 'Create':
+                      suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Suffix': suffix})
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {})
+  
+  RandomSuffixRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # KMS Key for Encryption
+  KMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub 'KMS key for ${ProjectName}-${Environment} encryption'
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Sid: Allow use of the key for AWS services
+            Effect: Allow
+            Principal:
+              Service:
+                - s3.amazonaws.com
+                - dynamodb.amazonaws.com
+                - lambda.amazonaws.com
+                - logs.amazonaws.com
+                - sqs.amazonaws.com
+                - sns.amazonaws.com
+                - events.amazonaws.com
+                - states.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-kms-key'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  KMSKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub 'alias/${ProjectName}-${Environment}-key'
+      TargetKeyId: !Ref KMSKey 
+ # S3 Buckets for Storage
+  ContentBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-${Environment}-content-${RandomSuffix.Suffix}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !Ref KMSKey
+            BucketKeyEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: ContentLifecycle
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: STANDARD_IA
+              - TransitionInDays: 90
+                StorageClass: GLACIER
+            ExpirationInDays: !Ref ContentRetentionDays
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-content-bucket'
+
+  ArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-${Environment}-artifacts-${RandomSuffix.Suffix}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !Ref KMSKey
+            BucketKeyEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-artifacts-bucket'
+
+  TracesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-${Environment}-traces-${RandomSuffix.Suffix}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !Ref KMSKey
+            BucketKeyEnabled: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: TracesLifecycle
+            Status: Enabled
+            ExpirationInDays: 90
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-traces-bucket'
+
+  # DynamoDB Tables
+  ArticlesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${ProjectName}-${Environment}-articles'
+      BillingMode: !Ref DynamoDBBillingMode
+      AttributeDefinitions:
+        - AttributeName: article_id
+          AttributeType: S
+        - AttributeName: state
+          AttributeType: S
+        - AttributeName: published_at
+          AttributeType: S
+        - AttributeName: cluster_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: article_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: state-published_at-index
+          KeySchema:
+            - AttributeName: state
+              KeyType: HASH
+            - AttributeName: published_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          BillingMode: !Ref DynamoDBBillingMode
+        - IndexName: cluster-published_at-index
+          KeySchema:
+            - AttributeName: cluster_id
+              KeyType: HASH
+            - AttributeName: published_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          BillingMode: !Ref DynamoDBBillingMode
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !Ref KMSKey
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-articles-table'
+
+  CommentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${ProjectName}-${Environment}-comments'
+      BillingMode: !Ref DynamoDBBillingMode
+      AttributeDefinitions:
+        - AttributeName: comment_id
+          AttributeType: S
+        - AttributeName: article_id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: comment_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: article-created_at-index
+          KeySchema:
+            - AttributeName: article_id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          BillingMode: !Ref DynamoDBBillingMode
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !Ref KMSKey
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-comments-table'
+
+  MemoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${ProjectName}-${Environment}-memory'
+      BillingMode: !Ref DynamoDBBillingMode
+      AttributeDefinitions:
+        - AttributeName: memory_id
+          AttributeType: S
+        - AttributeName: memory_type
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: memory_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: type-created_at-index
+          KeySchema:
+            - AttributeName: memory_type
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          BillingMode: !Ref DynamoDBBillingMode
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !Ref KMSKey
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-memory-table'
+
+  # IAM Roles
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-lambda-execution-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !If
+          - EnableXRayTracingCondition
+          - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+          - !Ref AWS::NoValue
+      Policies:
+        - PolicyName: SentinelLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub '${ContentBucket}/*'
+                  - !Sub '${ArtifactsBucket}/*'
+                  - !Sub '${TracesBucket}/*'
+                  - !GetAtt ContentBucket.Arn
+                  - !GetAtt ArtifactsBucket.Arn
+                  - !GetAtt TracesBucket.Arn
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                Resource:
+                  - !GetAtt ArticlesTable.Arn
+                  - !GetAtt CommentsTable.Arn
+                  - !GetAtt MemoryTable.Arn
+                  - !Sub '${ArticlesTable.Arn}/index/*'
+                  - !Sub '${CommentsTable.Arn}/index/*'
+                  - !Sub '${MemoryTable.Arn}/index/*'
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource:
+                  - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}'
+                  - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockEmbeddingModel}'
+              - Effect: Allow
+                Action:
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:ReEncrypt*
+                  - kms:GenerateDataKey*
+                  - kms:DescribeKey
+                Resource: !GetAtt KMSKey.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-lambda-execution-role'
+
+  # CloudWatch Log Groups
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ProjectName}-${Environment}'
+      RetentionInDays: !Ref LogRetentionDays
+      KmsKeyId: !GetAtt KMSKey.Arn
+
+  # CloudWatch Dashboard
+  SentinelDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub '${ProjectName}-${Environment}-dashboard'
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "${ArticlesTable}" ],
+                  [ ".", "ConsumedWriteCapacityUnits", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "DynamoDB Capacity Utilization",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  [ "AWS/S3", "BucketSizeBytes", "BucketName", "${ContentBucket}", "StorageType", "StandardStorage" ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "S3 Storage Utilization",
+                "period": 86400
+              }
+            }
+          ]
+        }
+
+Outputs:
+  # S3 Bucket Outputs
+  ContentBucketName:
+    Description: Name of the content S3 bucket
+    Value: !Ref ContentBucket
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-content-bucket-name'
+  
+  ArtifactsBucketName:
+    Description: Name of the artifacts S3 bucket
+    Value: !Ref ArtifactsBucket
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-artifacts-bucket-name'
+  
+  TracesBucketName:
+    Description: Name of the traces S3 bucket
+    Value: !Ref TracesBucket
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-traces-bucket-name'
+  
+  # DynamoDB Table Outputs
+  ArticlesTableName:
+    Description: Name of the articles DynamoDB table
+    Value: !Ref ArticlesTable
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-articles-table-name'
+  
+  CommentsTableName:
+    Description: Name of the comments DynamoDB table
+    Value: !Ref CommentsTable
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-comments-table-name'
+  
+  MemoryTableName:
+    Description: Name of the memory DynamoDB table
+    Value: !Ref MemoryTable
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-memory-table-name'
+  
+  # IAM Role Outputs
+  LambdaExecutionRoleArn:
+    Description: ARN of Lambda execution role
+    Value: !GetAtt LambdaExecutionRole.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-lambda-execution-role-arn'
+  
+  # KMS Key Outputs
+  KMSKeyArn:
+    Description: ARN of KMS key for encryption
+    Value: !GetAtt KMSKey.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-kms-key-arn'
+  
+  KMSKeyId:
+    Description: ID of KMS key for encryption
+    Value: !Ref KMSKey
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-kms-key-id'
+  
+  # Dashboard Output
+  DashboardURL:
+    Description: URL of CloudWatch dashboard
+    Value: !Sub 'https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${ProjectName}-${Environment}-dashboard'
+  
+  # Deployment Information
+  DeploymentInfo:
+    Description: Deployment information and next steps
+    Value: !Sub |
+      Environment: ${Environment}
+      Region: ${AWS::Region}
+      Agents Enabled: ${EnableAgents}
+      Amplify Enabled: ${EnableAmplify}
+      OpenSearch Enabled: ${EnableOpenSearch}
+      
+      Next Steps:
+      1. Configure RSS feeds in config/feeds.yaml
+      2. Update keywords in config/keywords.yaml
+      3. Set up SES email identities for notifications
+      4. Deploy Lambda function packages to artifacts bucket
+      5. Test end-to-end ingestion pipeline
+      6. Monitor CloudWatch dashboards and logs

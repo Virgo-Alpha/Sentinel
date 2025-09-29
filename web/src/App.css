@@ -87,3 +87,60 @@
 .priority-low {
   @apply border-l-4 border-green-500;
 }
+
+/* Chat interface styles */
+.chat-container {
+  height: calc(100vh - 200px);
+  min-height: 500px;
+}
+
+.chat-messages {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.chat-message-user {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.chat-message-assistant {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+/* Text truncation utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Auto-resizing textarea */
+.auto-resize-textarea {
+  resize: none;
+  overflow: hidden;
+}
+
+/* Export dropdown animation */
+.export-dropdown {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

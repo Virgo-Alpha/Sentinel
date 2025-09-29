@@ -97,3 +97,27 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "xray_layer_arn" {
+  description = "ARN of X-Ray correlation Lambda layer"
+  type        = string
+  default     = ""
+}
+
+variable "additional_layers" {
+  description = "Additional Lambda layer ARNs"
+  type        = list(string)
+  default     = []
+}
+
+variable "correlation_id_header" {
+  description = "Header name for correlation ID"
+  type        = string
+  default     = "X-Correlation-ID"
+}
+
+variable "enable_enhanced_tracing" {
+  description = "Enable enhanced X-Ray tracing with correlation IDs"
+  type        = bool
+  default     = true
+}

@@ -5,21 +5,24 @@ global.fetch = jest.fn();
 
 // Mock AWS Amplify auth
 jest.mock('aws-amplify/auth', () => ({
-  fetchAuthSession: jest.fn(() => 
-    Promise.resolve({
+  fetchAuthSession: jest.fn(),
+}));
+
+describe('API Service', () => {
+  const mockFetchAuthSession = require('aws-amplify/auth').fetchAuthSession;
+  
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.REACT_APP_API_GATEWAY_URL = 'https://api.example.com';
+    
+    // Default mock for successful auth session
+    mockFetchAuthSession.mockResolvedValue({
       tokens: {
         idToken: {
           toString: () => 'mock-token',
         },
       },
-    })
-  ),
-}));
-
-describe('API Service', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    process.env.REACT_APP_API_GATEWAY_URL = 'https://api.example.com';
+    });
   });
 
   describe('Authentication', () => {
@@ -44,8 +47,7 @@ describe('API Service', () => {
     });
 
     test('handles auth session failure gracefully', async () => {
-      const { fetchAuthSession } = require('aws-amplify/auth');
-      fetchAuthSession.mockRejectedValue(new Error('Auth failed'));
+      mockFetchAuthSession.mockRejectedValue(new Error('Auth failed'));
 
       const mockResponse = {
         ok: true,

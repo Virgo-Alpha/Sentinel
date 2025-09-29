@@ -71,6 +71,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   timestamp: string;
   sources?: ChatSource[];
+  feedback?: 'up' | 'down';
 }
 
 export interface ChatSource {

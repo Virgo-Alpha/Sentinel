@@ -5,8 +5,8 @@ import { Authenticator } from '@aws-amplify/ui-react';
 import '@testing-library/jest-dom';
 
 // Mock CSS imports
-jest.mock('@aws-amplify/ui-react/styles.css', () => ({}));
-jest.mock('../App.css', () => ({}));
+jest.mock('@aws-amplify/ui-react/styles.css', () => '', { virtual: true });
+jest.mock('../App.css', () => '', { virtual: true });
 
 // Mock AWS Amplify
 jest.mock('aws-amplify', () => ({
@@ -15,12 +15,24 @@ jest.mock('aws-amplify', () => ({
   },
 }));
 
+// Helper to create mock JWT token
+const createMockJWT = (groups: string[] = ['Analysts']) => {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(JSON.stringify({
+    'cognito:groups': groups,
+    email: 'test@example.com',
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  }));
+  const signature = 'mock-signature';
+  return `${header}.${payload}.${signature}`;
+};
+
 jest.mock('aws-amplify/auth', () => ({
   fetchAuthSession: jest.fn(() => 
     Promise.resolve({
       tokens: {
         idToken: {
-          toString: () => 'mock-token',
+          toString: () => createMockJWT(['Analysts']),
         },
       },
     })
@@ -95,7 +107,7 @@ describe('Authentication Flow', () => {
 
     await waitFor(() => {
       expect(screen.getByText('test@example.com')).toBeInTheDocument();
-      expect(screen.getByText('Analyst')).toBeInTheDocument();
+      expect(screen.getByText('Security Analyst')).toBeInTheDocument();
     });
   });
 

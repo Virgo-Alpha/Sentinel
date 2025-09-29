@@ -174,6 +174,12 @@ resource "aws_lambda_function" "functions" {
     mode = var.enable_xray_tracing ? "Active" : "PassThrough"
   }
 
+  # Lambda Layers (including X-Ray correlation layer)
+  layers = compact([
+    var.xray_layer_arn != "" ? var.xray_layer_arn : null,
+    var.additional_layers != null ? var.additional_layers : null
+  ])
+
   # Dead letter queue configuration
   dead_letter_config {
     target_arn = aws_sqs_queue.lambda_dlq[each.key].arn

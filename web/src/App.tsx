@@ -1,15 +1,12 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Amplify } from 'aws-amplify';
 import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import './App.css';
 
 // Components
-import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import ReviewQueue from './pages/ReviewQueue';
-import Chat from './pages/Chat';
+import AppRoutes from './routes/AppRoutes';
 import Login from './pages/Login';
 
 // Configure Amplify
@@ -21,8 +18,9 @@ const amplifyConfig = {
       identityPoolId: process.env.REACT_APP_IDENTITY_POOL_ID || '',
       loginWith: {
         email: true,
+        username: false,
       },
-      signUpVerificationMethod: 'code',
+      signUpVerificationMethod: 'code' as const,
       userAttributes: {
         email: {
           required: true,
@@ -66,14 +64,7 @@ const App: React.FC = () => {
             <Route path="/*" element={
               <Authenticator hideSignUp={true}>
                 {({ signOut, user }) => (
-                  <Layout user={user} signOut={signOut}>
-                    <Routes>
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/review" element={<ReviewQueue />} />
-                      <Route path="/chat" element={<Chat />} />
-                    </Routes>
-                  </Layout>
+                  <AppRoutes user={user} signOut={signOut} />
                 )}
               </Authenticator>
             } />
