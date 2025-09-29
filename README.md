@@ -42,15 +42,23 @@ graph TB
 
 ## 🚀 Key Features
 
-- **Automated Content Ingestion**: Monitors 21+ RSS feeds from government agencies, security vendors, and news sources
-- **Intelligent Relevance Assessment**: LLM-powered analysis with keyword targeting for your technology stack
+### ✅ Implemented Core Components
 - **Advanced Configuration Management**: Validated YAML configuration with hot-reloading and comprehensive error checking
-- **Smart Keyword Matching**: Exact and fuzzy matching with confidence scoring and context extraction
+- **Smart Keyword Matching**: Exact and fuzzy matching with confidence scoring and context extraction using Levenshtein distance
+- **RSS Feed Parser**: Complete Lambda tool for parsing RSS/Atom feeds with HTML normalization and S3 storage
+- **Relevance Evaluator**: LLM-powered analysis using AWS Bedrock for content assessment and entity extraction
+- **Comprehensive Testing**: Full unit test coverage for configuration, keyword matching, feed parsing, and relevance evaluation
+
+### 🚧 In Development
 - **Advanced Deduplication**: Multi-layered approach combining heuristic and semantic methods
 - **Human-in-the-Loop Workflow**: Smart escalation with review queues and approval workflows
+- **Infrastructure Deployment**: Terraform modules for complete AWS infrastructure
+- **Multi-Agent Architecture**: Strands integration with AWS Bedrock AgentCore
+
+### 📋 Planned Features
 - **Natural Language Queries**: Chat interface for analysts to query the intelligence database
 - **Comprehensive Reporting**: XLSX export with keyword analysis and hit counts
-- **Multi-Agent Architecture**: Built with Strands and deployed to AWS Bedrock AgentCore
+- **Web Application**: Amplify-based dashboard for article review and management
 
 ## 📋 Prerequisites
 
@@ -145,34 +153,74 @@ print(f'✓ Found {len(matches)} keyword matches in sample text')
 "
 ```
 
+**Test Lambda Tools:**
+
+```bash
+# Test feed parser
+python3 -c "
+from src.lambda_tools.feed_parser import FeedParser, ContentNormalizer
+import os
+os.environ['CONTENT_BUCKET'] = 'test-bucket'
+
+# Test content normalization
+normalizer = ContentNormalizer()
+html = '<h1>Security Alert</h1><p>Critical vulnerability discovered</p>'
+result = normalizer.normalize_html(html)
+print(f'✓ Normalized content: {len(result[\"normalized_text\"])} characters')
+"
+
+# Test relevancy evaluator (requires AWS credentials)
+python3 -c "
+from src.lambda_tools.relevancy_evaluator import KeywordMatcher
+matcher = KeywordMatcher()
+content = 'Microsoft Exchange Server vulnerability CVE-2024-1234'
+keywords = ['Microsoft', 'Exchange Server', 'CVE', 'vulnerability']
+matches = matcher.find_keyword_matches(content, keywords)
+print(f'✓ Found {len(matches)} keyword matches with contexts')
+"
+```
+
 ## 📁 Project Structure
 
 ```
 sentinel-cybersecurity-triage/
-├── infra/                          # Terraform infrastructure
+├── infra/                          # Terraform infrastructure (planned)
 │   ├── modules/                    # Reusable Terraform modules
 │   ├── envs/                       # Environment-specific configurations
 │   │   ├── dev/                    # Development environment
 │   │   └── prod/                   # Production environment
 │   ├── bootstrap/                  # Terraform state backend setup
 │   └── *.tf                        # Main Terraform configuration
-├── src/                            # Source code
-│   ├── lambda_tools/               # Lambda function implementations
-│   └── shared/                     # Shared utilities and data models
-│       ├── __init__.py             # Package initialization
-│       ├── models.py               # Pydantic data models and schemas
-│       ├── config.py               # Configuration constants and settings
-│       ├── config_loader.py        # Configuration loaders with validation
-│       └── keyword_manager.py      # Keyword matching and management
-├── config/                         # Configuration files
-│   ├── feeds.yaml                  # RSS feed configuration
-│   ├── keywords.yaml               # Target keywords configuration
-│   └── feature_flags.yaml          # Feature flags for rollout
-├── tests/                          # Test files
-├── scripts/                        # Deployment and utility scripts
-├── docs/                           # Documentation
-└── requirements.txt                # Python dependencies
+├── src/                            # Source code ✅ IMPLEMENTED
+│   ├── lambda_tools/               # Lambda function implementations ✅
+│   │   ├── feed_parser.py          # RSS/Atom feed parsing with S3 storage ✅
+│   │   └── relevancy_evaluator.py  # Bedrock-powered relevance assessment ✅
+│   └── shared/                     # Shared utilities and data models ✅
+│       ├── __init__.py             # Package initialization ✅
+│       ├── models.py               # Pydantic data models and schemas ✅
+│       ├── config.py               # Configuration constants and settings ✅
+│       ├── config_loader.py        # Configuration loaders with validation ✅
+│       └── keyword_manager.py      # Keyword matching and management ✅
+├── config/                         # Configuration files ✅
+│   ├── feeds.yaml                  # RSS feed configuration ✅
+│   ├── keywords.yaml               # Target keywords configuration ✅
+│   └── feature_flags.yaml          # Feature flags for rollout ✅
+├── tests/                          # Test files ✅ COMPREHENSIVE COVERAGE
+│   ├── test_config_loader.py       # Configuration system tests ✅
+│   ├── test_feed_parser.py         # Feed parser and normalizer tests ✅
+│   └── test_relevancy_evaluator.py # Relevance evaluation tests ✅
+├── scripts/                        # Deployment and utility scripts ✅
+├── docs/                           # Documentation ✅
+└── requirements.txt                # Python dependencies ✅
 ```
+
+**Implementation Status:**
+- ✅ **Core Configuration System**: Complete with validation and fuzzy matching
+- ✅ **Lambda Tools**: FeedParser and RelevancyEvaluator fully implemented
+- ✅ **Comprehensive Testing**: 25+ test classes with 100+ test methods
+- ✅ **Data Models**: Complete Pydantic schemas for all entities
+- 🚧 **Infrastructure**: Terraform modules in development
+- 📋 **Web Application**: Amplify frontend planned
 
 ## 🔧 Configuration
 
@@ -342,21 +390,25 @@ Sentinel is designed for gradual rollout with feature flags:
 
 ## 🧪 Testing
 
-The project includes comprehensive unit tests for configuration management and keyword matching:
+The project includes comprehensive unit tests for all implemented components:
 
 ```bash
 # Run all tests
 pytest tests/
 
 # Run specific test modules
-pytest tests/test_config_loader.py -v
+pytest tests/test_config_loader.py -v          # Configuration system tests
+pytest tests/test_feed_parser.py -v            # RSS feed parser tests  
+pytest tests/test_relevancy_evaluator.py -v    # Relevance evaluation tests
 
 # Run tests with coverage reporting
 pytest --cov=src --cov-report=html tests/
 
-# Run tests for specific functionality
-pytest tests/test_config_loader.py::TestFeedConfigLoader::test_load_valid_config -v
-pytest tests/test_config_loader.py::TestKeywordManager::test_find_fuzzy_matches -v
+# Run specific test classes
+pytest tests/test_config_loader.py::TestFeedConfigLoader -v
+pytest tests/test_config_loader.py::TestKeywordManager -v
+pytest tests/test_feed_parser.py::TestContentNormalizer -v
+pytest tests/test_relevancy_evaluator.py::TestBedrockEntityExtractor -v
 
 # Lint and format code
 black src/ tests/
@@ -365,12 +417,30 @@ flake8 src/ tests/
 mypy src/
 ```
 
-**Test Coverage Includes:**
-- **Feed Configuration**: Loading, validation, URL checking, interval parsing
-- **Keyword Management**: Exact matching, fuzzy matching, confidence scoring
-- **Configuration Validation**: Duplicate detection, format validation, error handling
-- **Edge Cases**: Invalid URLs, malformed YAML, missing files, encoding issues
-- **Performance**: Levenshtein distance calculation, indexed lookups
+**Current Test Coverage (25 test classes, 100+ test methods):**
+
+### Configuration System Tests
+- **FeedConfigLoader**: YAML loading, URL validation, interval parsing, category filtering
+- **KeywordManager**: Exact matching, fuzzy matching with Levenshtein distance, confidence scoring
+
+### Lambda Tools Tests  
+- **FeedParser**: RSS/Atom parsing, HTML normalization, S3 storage, error handling
+- **ContentNormalizer**: HTML cleaning, metadata extraction, URL extraction
+- **RelevancyEvaluator**: Bedrock integration, keyword matching, entity extraction
+- **KeywordMatcher**: Context extraction, hit counting, confidence calculation
+- **BedrockEntityExtractor**: CVE extraction, threat actor identification, vendor detection
+- **BedrockRelevanceAssessor**: Relevance scoring, rationale generation
+
+### Integration Tests
+- **Lambda Handlers**: Event processing, error handling, response formatting
+- **Error Scenarios**: Network failures, malformed feeds, API errors, invalid configurations
+
+**Test Quality Features:**
+- Mock AWS services (Bedrock, S3) for isolated testing
+- Edge case coverage (empty inputs, malformed data, network errors)
+- Performance validation (Levenshtein distance, indexed lookups)
+- Configuration validation (duplicate detection, format checking)
+- Comprehensive error handling and logging verification
 
 ## 📚 Documentation
 

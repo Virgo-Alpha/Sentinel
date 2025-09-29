@@ -1,0 +1,159 @@
+# =============================================================================
+# SENTINEL PRODUCTION ENVIRONMENT CONFIGURATION TEMPLATE
+# =============================================================================
+# Copy this file to terraform.tfvars and customize for your environment
+# This template provides production-ready defaults with security best practices
+# =============================================================================
+
+# =============================================================================
+# REQUIRED CONFIGURATION - MUST BE CUSTOMIZED
+# =============================================================================
+
+# AWS Configuration
+aws_region = "us-east-1"  # Change to your preferred production region
+
+# Ownership and Billing
+owner       = "security-operations-team"  # Change to your team name
+cost_center = "security-production"       # Change to your cost center
+
+# =============================================================================
+# FEATURE FLAGS - PRODUCTION DEPLOYMENT STRATEGY
+# =============================================================================
+enable_agents      = true   # Enable after initial deployment and testing
+enable_auto_publish = false # Keep human oversight in production (can enable later)
+
+# =============================================================================
+# RESOURCE CONFIGURATION - PRODUCTION SIZING
+# =============================================================================
+dynamodb_billing_mode = "PAY_PER_REQUEST"  # or "PROVISIONED" for predictable workloads
+max_concurrent_feeds  = 10                  # Adjust based on your feed count
+
+# =============================================================================
+# QUALITY THRESHOLDS - PRODUCTION-GRADE SETTINGS
+# =============================================================================
+relevance_threshold  = 0.75  # High-quality threshold for production
+similarity_threshold = 0.85  # Precise duplicate detection
+confidence_threshold = 0.8   # High confidence for auto-actions
+
+# =============================================================================
+# COST CONTROLS - PRODUCTION LIMITS WITH MONITORING
+# =============================================================================
+max_daily_llm_calls   = 25000   # Adjust based on your expected volume
+max_monthly_cost_usd  = 1500.0  # Set appropriate budget limit
+
+# =============================================================================
+# BEDROCK CONFIGURATION - PRODUCTION MODELS
+# =============================================================================
+bedrock_model_id = "anthropic.claude-3-5-sonnet-20241022-v2:0"  # Latest production model
+
+# =============================================================================
+# MONITORING CONFIGURATION - PRODUCTION OBSERVABILITY
+# =============================================================================
+log_retention_days = 90  # Extended retention for compliance
+
+# =============================================================================
+# EMAIL CONFIGURATION - UPDATE WITH YOUR ACTUAL EMAIL ADDRESSES
+# =============================================================================
+ses_sender_email = "sentinel@security.company.com"  # Change to your sender email
+
+escalation_emails = [
+  "security-analysts@company.com",    # Change to your analyst team
+  "security-leads@company.com",       # Change to your security leads
+  "security-manager@company.com"      # Change to your security manager
+]
+
+digest_emails = [
+  "security-team@company.com",        # Change to your security team
+  "security-management@company.com",  # Change to your management team
+  "stakeholders@company.com"          # Change to your stakeholders
+]
+
+alert_emails = [
+  "security-alerts@company.com",      # Change to your alert channel
+  "soc@company.com",                  # Change to your SOC team
+  "oncall-security@company.com",      # Change to your on-call team
+  "incident-response@company.com"     # Change to your IR team
+]
+
+# =============================================================================
+# AMPLIFY CONFIGURATION - PRODUCTION WEB APPLICATION
+# =============================================================================
+amplify_repository_url = "https://github.com/your-org/sentinel-web-app"  # Change to your repo
+
+amplify_callback_urls = [
+  "https://sentinel.security.company.com/callback",     # Change to your production domain
+  "https://app.sentinel.company.com/callback"           # Alternative domain if needed
+]
+
+amplify_logout_urls = [
+  "https://sentinel.security.company.com/logout",       # Change to your production domain
+  "https://app.sentinel.company.com/logout"             # Alternative domain if needed
+]
+
+# =============================================================================
+# OPTIONAL ADVANCED CONFIGURATIONS
+# =============================================================================
+# Uncomment and customize these advanced settings as needed
+
+# VPC Configuration (uncomment to override defaults)
+# create_vpc         = true
+# vpc_cidr          = "10.0.0.0/16"
+# availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+
+# Processing Configuration (uncomment to override defaults)
+# max_articles_per_fetch  = 100
+# content_retention_days  = 365
+
+# Lambda Configuration (uncomment to override defaults)
+# lambda_memory_size = 1024
+# lambda_timeout     = 600
+
+# Bedrock Configuration (uncomment to override defaults)
+# bedrock_embedding_model = "amazon.titan-embed-text-v1"
+
+# Monitoring Configuration (uncomment to override defaults)
+# enable_xray_tracing       = true
+# enable_detailed_monitoring = true
+
+# Feature Flags (uncomment to override defaults)
+# enable_amplify            = true
+# enable_opensearch         = true
+# enable_semantic_dedup     = true
+# enable_llm_relevance      = true
+# enable_email_notifications = true
+
+# Tags (uncomment to override defaults)
+# common_tags = {
+#   Project      = "Sentinel"
+#   Environment  = "prod"
+#   ManagedBy    = "Terraform"
+#   Owner        = "SecurityTeam"
+#   CostCenter   = "Security"
+#   Compliance   = "Required"
+#   Backup       = "Required"
+#   DataClass    = "Confidential"
+#   Monitoring   = "Required"
+#   Support      = "24x7"
+# }
+
+# =============================================================================
+# SECURITY AND COMPLIANCE CONFIGURATIONS
+# =============================================================================
+# Uncomment these if you need additional security controls
+
+# WAF IP restrictions (if needed for additional security)
+# allowed_ips = [
+#   "203.0.113.0/24",    # Your office network
+#   "198.51.100.0/24"    # Your VPN network
+# ]
+
+# Geographic restrictions (if needed for compliance)
+# allowed_countries = ["US", "CA", "GB"]
+
+# Custom domain configuration (requires Route53 hosted zone)
+# custom_domain = "sentinel.security.company.com"
+
+# Advanced monitoring and alerting
+# enable_cost_anomaly_detection = true
+# enable_security_hub_integration = true
+# enable_config_rules = true

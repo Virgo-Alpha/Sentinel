@@ -1,0 +1,405 @@
+name: sentinel-ingestor-agent
+version: "1.0.0"
+description: "Autonomous cybersecurity news ingestion and triage agent for Sentinel platform"
+
+# Model configuration
+model:
+  provider: "bedrock"
+  model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+  temperature: 0.1
+  max_tokens: 4000
+
+# Agent instructions and behavior
+instructions: |
+  You are a cybersecurity intelligence analyst responsible for processing RSS feeds and news sources.
+  
+  Your primary responsibilities:
+  1. Ingest and parse cybersecurity news from configured RSS feeds
+  2. Assess content relevance using keyword matching and LLM evaluation
+  3. Perform multi-layered deduplication (heuristic and semantic)
+  4. Apply comprehensive guardrails for quality assurance
+  5. Make triage decisions (AUTO_PUBLISH, REVIEW, DROP)
+  6. Escalate uncertain cases to human review
+  7. Store processed content with complete audit trails
+  
+  Processing workflow:
+  1. Parse feeds using feed_parser tool
+  2. Evaluate relevance with relevancy_evaluator tool
+  3. Check for duplicates using dedup_tool
+  4. Apply guardrails using guardrail_tool
+  5. Store results using storage_tool
+  6. Escalate to humans using human_escalation tool when needed
+  7. Send notifications using notifier tool
+  
+  Decision criteria:
+  - AUTO_PUBLISH: Relevancy > 0.8, keyword matches ≥ 1, guardrails pass, not duplicate
+  - REVIEW: Relevancy 0.6-0.8 with keywords, or relevancy > 0.8 without keywords, guardrails pass
+  - DROP: Relevancy < 0.6, guardrail failures, or duplicates
+  
+  Always maintain complete audit trails and provide clear rationales for decisions.
+  Be conservative with auto-publishing - when in doubt, escalate to human review.
+
+# Tool definitions
+tools:
+  - name: feed_parser
+    description: "Parse RSS/Atom feeds and extract normalized articles"
+    lambda_function: "sentinel-feed-parser"
+    parameters:
+      feed_id:
+        type: string
+        description: "Unique identifier for the RSS feed"
+        required: true
+      since:
+        type: string
+        description: "ISO8601 datetime to fetch articles since (optional)"
+        required: false
+    returns:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              url: 
+                type: string
+              title:
+                type: string
+              published_at:
+                type: string
+              raw_html_s3:
+                type: string
+              content_hash:
+                type: string
+
+  - name: relevancy_evaluator
+    description: "Assess content relevance and extract cybersecurity entities"
+    lambda_function: "sentinel-relevancy-evaluator"
+    parameters:
+      article_id:
+        type: string
+        description: "Unique article identifier"
+        required: true
+      content:
+        type: string
+        description: "Article content to evaluate"
+        required: true
+      target_keywords:
+        type: array
+        description: "List of target keywords to match"
+        items:
+          type: string
+        required: true
+    returns:
+      type: object
+      properties:
+        is_relevant:
+          type: boolean
+        relevancy_score:
+          type: number
+        keyword_matches:
+          type: array
+          items:
+            type: object
+            properties:
+              keyword:
+                type: string
+              hit_count:
+                type: integer
+              context:
+                type: array
+                items:
+                  type: string
+        entities:
+          type: object
+          properties:
+            cves:
+              type: array
+              items:
+                type: string
+            threat_actors:
+              type: array
+              items:
+                type: string
+            malware:
+              type: array
+              items:
+                type: string
+            vendors:
+              type: array
+              items:
+                type: string
+            products:
+              type: array
+              items:
+                type: string
+        rationale:
+          type: string
+
+  - name: dedup_tool
+    description: "Identify duplicate articles using heuristic and semantic analysis"
+    lambda_function: "sentinel-dedup-tool"
+    parameters:
+      article_id:
+        type: string
+        description: "Article ID to check for duplicates"
+        required: true
+      content:
+        type: string
+        description: "Article content for semantic comparison"
+        required: true
+      metadata:
+        type: object
+        description: "Article metadata (title, url, published_at, source)"
+        required: true
+    returns:
+      type: object
+      properties:
+        is_duplicate:
+          type: boolean
+        duplicate_of:
+          type: string
+        cluster_id:
+          type: string
+        similarity_score:
+          type: number
+        duplicate_type:
+          type: string
+        rationale:
+          type: string
+
+  - name: guardrail_tool
+    description: "Apply comprehensive content validation and safety checks"
+    lambda_function: "sentinel-guardrail-tool"
+    parameters:
+      article_id:
+        type: string
+        description: "Article ID being validated"
+        required: true
+      content:
+        type: string
+        description: "Article content to validate"
+        required: true
+      extracted_entities:
+        type: object
+        description: "Previously extracted entities for validation"
+        required: true
+      summary:
+        type: string
+        description: "Generated summary to validate"
+        required: false
+    returns:
+      type: object
+      properties:
+        passed:
+          type: boolean
+        violations:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              severity:
+                type: string
+              description:
+                type: string
+        pii_detected:
+          type: boolean
+        sensitive_data_redacted:
+          type: boolean
+        hallucination_risk:
+          type: string
+        quality_score:
+          type: number
+
+  - name: storage_tool
+    description: "Store processed articles and manage state transitions"
+    lambda_function: "sentinel-storage-tool"
+    parameters:
+      article_id:
+        type: string
+        description: "Unique article identifier"
+        required: true
+      operation:
+        type: string
+        description: "Storage operation (create, update, publish, archive)"
+        required: true
+      data:
+        type: object
+        description: "Article data to store"
+        required: true
+      state:
+        type: string
+        description: "New article state"
+        required: true
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+        article_id:
+          type: string
+        state:
+          type: string
+        stored_at:
+          type: string
+
+  - name: human_escalation
+    description: "Queue items for human review with context and rationale"
+    lambda_function: "sentinel-human-escalation"
+    parameters:
+      article_id:
+        type: string
+        description: "Article ID requiring review"
+        required: true
+      escalation_reason:
+        type: string
+        description: "Reason for human escalation"
+        required: true
+      priority:
+        type: string
+        description: "Priority level (low, medium, high, critical)"
+        required: true
+      context:
+        type: object
+        description: "Additional context for reviewers"
+        required: true
+    returns:
+      type: object
+      properties:
+        queued:
+          type: boolean
+        queue_position:
+          type: integer
+        estimated_review_time:
+          type: string
+        notification_sent:
+          type: boolean
+
+  - name: notifier
+    description: "Send notifications and alerts via email and other channels"
+    lambda_function: "sentinel-notifier"
+    parameters:
+      notification_type:
+        type: string
+        description: "Type of notification (publication, escalation, digest, alert)"
+        required: true
+      recipients:
+        type: array
+        description: "List of recipient email addresses"
+        items:
+          type: string
+        required: true
+      subject:
+        type: string
+        description: "Notification subject"
+        required: true
+      content:
+        type: object
+        description: "Notification content and metadata"
+        required: true
+      priority:
+        type: string
+        description: "Notification priority"
+        required: false
+    returns:
+      type: object
+      properties:
+        sent:
+          type: boolean
+        message_id:
+          type: string
+        delivery_status:
+          type: string
+
+# Deployment configuration
+deployment:
+  target: "bedrock-agentcore"
+  region: "us-east-1"
+  
+  # IAM execution role
+  execution_role: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/SentinelIngestorAgentRole"
+  
+  # Resource configuration
+  memory_mb: 1024
+  timeout_seconds: 900
+  
+  # VPC configuration for private subnet deployment
+  vpc_config:
+    subnet_ids:
+      - "${PRIVATE_SUBNET_1_ID}"
+      - "${PRIVATE_SUBNET_2_ID}"
+    security_group_ids:
+      - "${LAMBDA_SECURITY_GROUP_ID}"
+  
+  # Environment variables
+  environment:
+    DYNAMODB_ARTICLES_TABLE: "${DYNAMODB_ARTICLES_TABLE}"
+    DYNAMODB_MEMORY_TABLE: "${DYNAMODB_MEMORY_TABLE}"
+    S3_CONTENT_BUCKET: "${S3_CONTENT_BUCKET}"
+    S3_ARTIFACTS_BUCKET: "${S3_ARTIFACTS_BUCKET}"
+    OPENSEARCH_ENDPOINT: "${OPENSEARCH_ENDPOINT}"
+    KMS_KEY_ID: "${KMS_KEY_ID}"
+    POWERTOOLS_SERVICE_NAME: "sentinel-ingestor-agent"
+    LOG_LEVEL: "INFO"
+    ENABLE_XRAY_TRACING: "true"
+
+# Agent behavior configuration
+behavior:
+  # Memory and context management
+  memory:
+    short_term_ttl_days: 7
+    long_term_retention: true
+    correlation_id_tracking: true
+  
+  # Error handling
+  error_handling:
+    max_retries: 3
+    backoff_strategy: "exponential"
+    fallback_to_human: true
+  
+  # Performance settings
+  performance:
+    batch_processing: true
+    parallel_tool_calls: true
+    caching_enabled: true
+  
+  # Quality assurance
+  quality:
+    reflection_enabled: true
+    confidence_threshold: 0.7
+    conservative_publishing: true
+
+# Monitoring and observability
+monitoring:
+  cloudwatch_logs: true
+  xray_tracing: true
+  custom_metrics:
+    - "articles_processed"
+    - "relevancy_scores"
+    - "deduplication_rate"
+    - "auto_publish_rate"
+    - "escalation_rate"
+  
+  alarms:
+    - name: "high_error_rate"
+      threshold: 0.05
+      comparison: "GreaterThanThreshold"
+    - name: "low_processing_rate"
+      threshold: 10
+      comparison: "LessThanThreshold"
+
+# Testing configuration
+testing:
+  unit_tests: true
+  integration_tests: true
+  load_tests: false
+  
+  test_feeds:
+    - name: "test-feed-1"
+      url: "https://example.com/test-feed.xml"
+      category: "Test"
+  
+  mock_responses: true
+  validation_enabled: true

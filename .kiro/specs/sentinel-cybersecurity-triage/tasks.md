@@ -40,7 +40,7 @@
     - Write unit tests for feed parsing and content normalization
     - _Requirements: 1.1, 1.2, 1.3, 1.5_
 
-  - [ ] 3.2 Implement RelevancyEvaluator Lambda tool
+  - [x] 3.2 Implement RelevancyEvaluator Lambda tool
 
     - Create Lambda function that uses Bedrock to assess content relevance
     - Implement keyword matching with hit counting and context extraction
@@ -49,7 +49,7 @@
     - Write unit tests for relevancy assessment and entity extraction
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.7_
 
-  - [ ] 3.3 Implement DedupTool Lambda tool
+  - [x] 3.3 Implement DedupTool Lambda tool
 
     - Create Lambda function for multi-layered deduplication
     - Implement heuristic deduplication (URL, title, domain comparison)
@@ -58,7 +58,7 @@
     - Write unit tests for both heuristic and semantic deduplication
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-  - [ ] 3.4 Implement GuardrailTool Lambda tool
+  - [x] 3.4 Implement GuardrailTool Lambda tool
 
     - Create Lambda function for comprehensive content validation
     - Add JSON schema validation for structured outputs
@@ -68,7 +68,7 @@
     - Write unit tests for all guardrail validation layers
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-  - [ ] 3.5 Implement StorageTool Lambda tool
+  - [x] 3.5 Implement StorageTool Lambda tool
     - Create Lambda function for DynamoDB and S3 operations
     - Add article creation, updates, and state management
     - Implement batch operations for performance optimization
@@ -76,9 +76,9 @@
     - Write unit tests for storage operations and data integrity
     - _Requirements: 1.3, 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 4. Create comprehensive Terraform infrastructure for complete deployment
+- [x] 4. Create comprehensive Terraform infrastructure for complete deployment
 
-  - [ ] 4.1 Build foundational Terraform modules
+  - [x] 4.1 Build foundational Terraform modules
 
     - Create network module with VPC, subnets, and VPC endpoints for Bedrock/OpenSearch
     - Build KMS module for encryption keys with proper key policies
@@ -88,7 +88,7 @@
     - Add IAM module with scoped roles for each Lambda function and service
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 12.3_
 
-  - [ ] 4.2 Implement Lambda packaging and deployment modules
+  - [x] 4.2 Implement Lambda packaging and deployment modules
 
     - Create Lambda module with archive_file packaging and S3 upload triggers
     - Add hash-based rebuilds for Lambda code changes (pip-compile/poetry.lock triggers)
@@ -97,7 +97,7 @@
     - Include VPC configuration for private subnet deployment
     - _Requirements: 1.1, 1.2, 1.3, 14.2_
 
-  - [ ] 4.3 Build orchestration and messaging modules
+  - [x] 4.3 Build orchestration and messaging modules
 
     - Create Step Functions module with state machine for direct Lambda orchestration
     - Implement EventBridge module with scheduled rules per feed category
@@ -106,7 +106,7 @@
     - Configure retry logic, backoff strategies, and compensation paths
     - _Requirements: 1.1, 1.4, 1.5, 7.2, 12.3, 12.4_
 
-  - [ ] 4.4 Implement web application and authentication modules
+  - [x] 4.4 Implement web application and authentication modules
 
     - Create Cognito module with user pools, groups (Analyst, Admin), and identity providers
     - Build API Gateway module for Analyst Assistant integration
@@ -115,7 +115,7 @@
     - Configure authentication flows and authorization policies
     - _Requirements: 11.1, 11.5, 8.1_
 
-  - [ ] 4.5 Set up observability and monitoring modules
+  - [x] 4.5 Set up observability and monitoring modules
 
     - Create CloudWatch module with dashboards for all key metrics
     - Implement X-Ray module with sampling rules and trace analysis
@@ -124,7 +124,7 @@
     - Configure log aggregation and retention policies
     - _Requirements: 14.1, 14.2, 14.5_
 
-  - [ ] 4.6 Create environment-specific configurations
+  - [x] 4.6 Create environment-specific configurations
     - Build dev environment configuration with reduced resources
     - Create prod environment configuration with full scaling
     - Implement variable files (terraform.tfvars) for each environment
@@ -132,9 +132,9 @@
     - Configure environment-specific feature flags and thresholds
     - _Requirements: All infrastructure requirements_
 
-- [ ] 5. Develop Strands agent definitions
+- [x] 5. Develop Strands agent definitions
 
-  - [ ] 5.1 Create Ingestor Agent Strands configuration
+  - [x] 5.1 Create Ingestor Agent Strands configuration
 
     - Write Strands YAML configuration for the Ingestor Agent
     - Define agent instructions, model selection, and tool bindings
@@ -143,7 +143,7 @@
     - Test agent creation and tool integration locally
     - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1_
 
-  - [ ] 5.2 Create Analyst Assistant Agent Strands configuration
+  - [x] 5.2 Create Analyst Assistant Agent Strands configuration
     - Write Strands YAML configuration for the Analyst Assistant Agent
     - Define conversational instructions and query processing capabilities
     - Configure API integration settings and session management
@@ -151,9 +151,9 @@
     - Test agent creation and query processing locally
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7_
 
-- [ ] 6. Implement query and reporting Lambda tools
+- [x] 6. Implement query and reporting Lambda tools
 
-  - [ ] 6.1 Implement QueryKB Lambda tool
+  - [x] 6.1 Implement QueryKB Lambda tool
 
     - Create Lambda function for natural language query processing
     - Add DynamoDB and OpenSearch query translation
@@ -162,7 +162,7 @@
     - Write unit tests for query translation and result processing
     - _Requirements: 9.1, 9.2, 9.4_
 
-  - [ ] 6.2 Implement report generation functionality
+  - [x] 6.2 Implement report generation functionality
     - Add XLSX export capability with keyword hit analysis
     - Implement result sorting by date in descending order
     - Include columns for title, link, date, keyword, hit count, and description
@@ -170,9 +170,9 @@
     - Write unit tests for report generation and export
     - _Requirements: 9.5, 9.6, 9.7_
 
-- [ ] 7. Build human-in-the-loop Lambda tools
+- [x] 7. Build human-in-the-loop Lambda tools
 
-  - [ ] 7.1 Implement HumanEscalation Lambda tool
+  - [x] 7.1 Implement HumanEscalation Lambda tool
 
     - Create Lambda function to queue items for human review
     - Add SES notification system for reviewer alerts
@@ -181,7 +181,7 @@
     - Write unit tests for escalation logic and notifications
     - _Requirements: 7.2, 8.1, 8.2_
 
-  - [ ] 7.2 Implement PublishDecision Lambda tool
+  - [x] 7.2 Implement PublishDecision Lambda tool
 
     - Create Lambda function for human approval/rejection processing
     - Add state transitions and downstream action triggering
@@ -190,7 +190,7 @@
     - Write unit tests for decision processing and state management
     - _Requirements: 8.2, 8.3, 8.4_
 
-  - [ ] 7.3 Implement CommentaryAPI Lambda tool
+  - [x] 7.3 Implement CommentaryAPI Lambda tool
     - Create Lambda function for comment creation and management
     - Add threaded discussion support with author attribution
     - Implement comment moderation and visibility controls
@@ -198,9 +198,9 @@
     - Write unit tests for comment operations and threading
     - _Requirements: 8.3, 8.4_
 
-- [ ] 8. Implement agent orchestration with deferral capability
+- [x] 8. Implement agent orchestration with deferral capability
 
-  - [ ] 8.1 Create agent shim Lambda for future AgentCore integration
+  - [x] 8.1 Create agent shim Lambda for future AgentCore integration
 
     - Build thin Lambda "agent shim" with same interface as Step Functions expects
     - Implement environment variable toggle (ORCHESTRATOR=direct|agentcore)
@@ -209,7 +209,7 @@
     - Maintain stable tool contracts for seamless agent integration
     - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1_
 
-  - [ ] 8.2 Prepare Bedrock AgentCore deployment scripts
+  - [x] 8.2 Prepare Bedrock AgentCore deployment scripts
     - Create deployment scripts for Strands CLI agent deployment
     - Configure CI/CD pipeline integration for agent updates
     - Add agent health checking and rollback capabilities
@@ -217,9 +217,9 @@
     - Document agent deployment and management procedures
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7_
 
-- [ ] 9. Create Amplify web application
+- [-] 9. Create Amplify web application
 
-  - [ ] 9.1 Set up Amplify project with authentication
+  - [-] 9.1 Set up Amplify project with authentication
 
     - Initialize Amplify project with React/TypeScript
     - Configure Cognito authentication with user groups (Analyst, Admin)
@@ -311,11 +311,11 @@
     - Confirm all performance metrics are achievable (≤5 min latency, ≥85% dup detection)
     - _Requirements: All requirements comprehensive validation_
 
-- [x] 13. Create comprehensive documentation and deployment guides
+- [ ] 13. Create comprehensive documentation and deployment guides
 
   - [ ] 13.1 Write project documentation
 
-    - Create comprehensive README.md with infrastructure architecture diagram
+    - Update the README.md with infrastructure architecture diagram
     - Document RSS feed configuration process and supported feed formats
     - Write keyword management guide with examples and best practices
     - Create user guide for web interface and natural language querying
@@ -338,3 +338,16 @@
     - Document user management and access control procedures
     - Create configuration change audit and rollback procedures
     - _Requirements: 7.2, 8.1, 13.6, 13.7_
+
+- [ ] 14. Create alternative AWS CloudFormation template as Terraform backup
+
+  - Create comprehensive CloudFormation template equivalent to Terraform infrastructure
+  - Convert all Terraform modules to CloudFormation nested stacks or resources in a single yaml file
+  - Include VPC, Lambda functions, DynamoDB tables, OpenSearch Serverless, S3 buckets
+  - Add Step Functions, EventBridge, SQS, SES, Cognito, API Gateway, and Amplify resources
+  - Configure IAM roles, policies, and KMS encryption keys with proper permissions
+  - Include CloudWatch dashboards, alarms, and X-Ray tracing configuration
+  - Add parameter files for dev and prod environment configurations
+  - Document deployment procedures and parameter customization options
+  - Test CloudFormation stack deployment and validate resource creation
+  - _Requirements: All infrastructure requirements as backup deployment method_

@@ -83,6 +83,17 @@ output "amplify_app_url" {
   value       = var.enable_amplify ? module.amplify[0].app_url : null
 }
 
+output "amplify_app_id" {
+  description = "Amplify application ID"
+  value       = var.enable_amplify ? module.amplify[0].app_id : null
+}
+
+# WAF (conditional)
+output "waf_web_acl_arn" {
+  description = "WAF Web ACL ARN"
+  value       = var.enable_amplify ? module.waf[0].web_acl_arn : null
+}
+
 # SES Configuration
 output "ses_sender_email" {
   description = "Verified SES sender email"

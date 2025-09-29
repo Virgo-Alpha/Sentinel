@@ -1,0 +1,226 @@
+{
+    "widgets": [
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "Sentinel/Agents", "Invocations", "AgentName", "sentinel-ingestor-agent", "Environment", "${ENVIRONMENT}" ],
+                    [ "...", "sentinel-analyst-assistant", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS_REGION}",
+                "title": "Agent Invocations",
+                "period": 300,
+                "stat": "Sum"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 12,
+            "y": 0,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "Sentinel/Agents", "Duration", "AgentName", "sentinel-ingestor-agent", "Environment", "${ENVIRONMENT}" ],
+                    [ "...", "sentinel-analyst-assistant", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS_REGION}",
+                "title": "Agent Duration (ms)",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 6,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "Sentinel/Agents", "Errors", "AgentName", "sentinel-ingestor-agent", "Environment", "${ENVIRONMENT}" ],
+                    [ "...", "sentinel-analyst-assistant", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS_REGION}",
+                "title": "Agent Errors",
+                "period": 300,
+                "stat": "Sum"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 12,
+            "y": 6,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ { "expression": "m1/m2*100", "label": "Ingestor Error Rate (%)", "id": "e1" } ],
+                    [ { "expression": "m3/m4*100", "label": "Analyst Error Rate (%)", "id": "e2" } ],
+                    [ "Sentinel/Agents", "Errors", "AgentName", "sentinel-ingestor-agent", "Environment", "${ENVIRONMENT}", { "id": "m1", "visible": false } ],
+                    [ ".", "Invocations", ".", ".", ".", ".", { "id": "m2", "visible": false } ],
+                    [ ".", "Errors", ".", "sentinel-analyst-assistant", ".", ".", { "id": "m3", "visible": false } ],
+                    [ ".", "Invocations", ".", ".", ".", ".", { "id": "m4", "visible": false } ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS_REGION}",
+                "title": "Error Rate (%)",
+                "period": 300,
+                "stat": "Average",
+                "yAxis": {
+                    "left": {
+                        "min": 0,
+                        "max": 10
+                    }
+                }
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 12,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "Sentinel/Processing", "ArticlesProcessed", "Environment", "${ENVIRONMENT}" ],
+                    [ ".", "ArticlesPublished", ".", "." ],
+                    [ ".", "ArticlesEscalated", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS_REGION}",
+                "title": "Article Processing",
+                "period": 300,
+                "stat": "Sum"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 8,
+            "y": 12,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "Sentinel/Processing", "DeduplicationRate", "Environment", "${ENVIRONMENT}" ],
+                    [ ".", "RelevancyRate", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS_REGION}",
+                "title": "Processing Rates (%)",
+                "period": 300,
+                "stat": "Average",
+                "yAxis": {
+                    "left": {
+                        "min": 0,
+                        "max": 100
+                    }
+                }
+            }
+        },
+        {
+            "type": "metric",
+            "x": 16,
+            "y": 12,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "Sentinel/Feeds", "FeedsFetched", "Environment", "${ENVIRONMENT}" ],
+                    [ ".", "FeedsFailed", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS_REGION}",
+                "title": "Feed Status",
+                "period": 300,
+                "stat": "Sum"
+            }
+        },
+        {
+            "type": "log",
+            "x": 0,
+            "y": 18,
+            "width": 24,
+            "height": 6,
+            "properties": {
+                "query": "SOURCE '/aws/lambda/sentinel-ingestor-agent' | SOURCE '/aws/lambda/sentinel-analyst-assistant'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 100",
+                "region": "${AWS_REGION}",
+                "title": "Recent Errors",
+                "view": "table"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 24,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/Bedrock", "InvocationLatency", "ModelId", "anthropic.claude-3-5-sonnet-20241022-v2:0" ],
+                    [ ".", "InvocationCount", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS_REGION}",
+                "title": "Bedrock Model Performance",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 12,
+            "y": 24,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "sentinel-articles-${ENVIRONMENT}" ],
+                    [ ".", "ConsumedWriteCapacityUnits", ".", "." ],
+                    [ "...", "sentinel-memory-${ENVIRONMENT}" ],
+                    [ ".", "ConsumedReadCapacityUnits", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS_REGION}",
+                "title": "DynamoDB Capacity",
+                "period": 300,
+                "stat": "Sum"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 30,
+            "width": 24,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/S3", "BucketSizeBytes", "BucketName", "sentinel-content-${ENVIRONMENT}", "StorageType", "StandardStorage" ],
+                    [ "...", "sentinel-artifacts-${ENVIRONMENT}", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS_REGION}",
+                "title": "S3 Storage Usage",
+                "period": 86400,
+                "stat": "Average"
+            }
+        }
+    ]
+}

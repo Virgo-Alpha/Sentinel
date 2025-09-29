@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sentinel: Article Requires Review</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .content { background-color: #ffffff; padding: 20px; border: 1px solid #dee2e6; border-radius: 5px; }
+        .footer { margin-top: 20px; padding: 10px; font-size: 12px; color: #6c757d; }
+        .button { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+        .alert { background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .metadata { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 ${project_name} - Article Review Required</h1>
+            <p>An article has been flagged for human review</p>
+        </div>
+        
+        <div class="content">
+            <div class="alert">
+                <strong>Action Required:</strong> Please review the article below and make a decision.
+            </div>
+            
+            <h2>{{article_title}}</h2>
+            
+            <div class="metadata">
+                <p><strong>Source:</strong> {{source}}</p>
+                <p><strong>Published:</strong> {{published_at}}</p>
+                <p><strong>Relevancy Score:</strong> {{relevancy_score}}</p>
+                <p><strong>Keyword Matches:</strong> {{keyword_matches}}</p>
+                <p><strong>Escalation Reason:</strong> {{escalation_reason}}</p>
+            </div>
+            
+            <h3>Summary</h3>
+            <p>{{summary}}</p>
+            
+            <h3>Extracted Entities</h3>
+            <ul>
+                {{#if cves}}<li><strong>CVEs:</strong> {{cves}}</li>{{/if}}
+                {{#if threat_actors}}<li><strong>Threat Actors:</strong> {{threat_actors}}</li>{{/if}}
+                {{#if malware}}<li><strong>Malware:</strong> {{malware}}</li>{{/if}}
+                {{#if vendors}}<li><strong>Vendors:</strong> {{vendors}}</li>{{/if}}
+                {{#if products}}<li><strong>Products:</strong> {{products}}</li>{{/if}}
+            </ul>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{review_url}}" class="button">Review Article</a>
+            </div>
+            
+            <p><strong>Original Article:</strong> <a href="{{article_url}}">{{article_url}}</a></p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated notification from ${project_name} Cybersecurity Triage System.</p>
+            <p>If you have questions, please contact your system administrator.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+${project_name} Daily Digest - {{date}}
+
+DAILY STATISTICS:
+- Articles Processed: {{total_articles}}
+- Published: {{published_articles}}
+- Under Review: {{review_articles}}
+- Keyword Matches: {{keyword_hits}}
+
+TOP KEYWORDS TODAY:
+{{#each top_keywords}}
+- {{keyword}}: {{count}} mentions
+{{/each}}
+
+HIGH PRIORITY ARTICLES:
+{{#each high_priority_articles}}
+---
+Title: {{title}}
+Source: {{source}} | Score: {{relevancy_score}}
+Summary: {{summary}}
+URL: {{url}}
+{{/each}}
+
+ARTICLES REQUIRING REVIEW:
+{{#each review_articles}}
+---
+Title: {{title}}
+Source: {{source}} | Reason: {{review_reason}}
+Summary: {{summary}}
+Review: {{review_url}}
+{{/each}}
+
+FEED PERFORMANCE:
+{{#each feed_stats}}
+{{feed_name}}: {{total}} articles, {{published}} published ({{success_rate}}% success rate)
+{{/each}}
+
+---
+This daily digest is generated automatically by ${project_name}.
+For detailed analysis, visit: {{dashboard_url}}

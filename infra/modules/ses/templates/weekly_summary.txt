@@ -1,0 +1,44 @@
+${project_name} Weekly Summary
+Week of {{week_start}} - {{week_end}}
+
+WEEKLY STATISTICS:
+- Total Articles: {{total_articles}} ({{total_trend}})
+- Published: {{published_articles}} ({{published_trend}})
+- Average Relevancy: {{avg_relevancy}} ({{relevancy_trend}})
+- Duplicate Rate: {{duplicate_rate}}% ({{duplicate_trend}})
+- Review Rate: {{review_rate}}% ({{review_trend}})
+- Average Response Time: {{response_time}} ({{response_trend}})
+
+TOP TRENDING KEYWORDS:
+{{#each trending_keywords}}
+- {{keyword}}: {{mentions}} mentions ({{trend}}) - {{articles}} articles
+{{/each}}
+
+MOST ACTIVE SOURCES:
+{{#each top_sources}}
+- {{source}}: {{count}} articles ({{percentage}}% of total)
+{{/each}}
+
+NOTABLE SECURITY EVENTS:
+{{#each notable_events}}
+---
+{{title}}
+Impact: {{impact}} | Affected: {{affected_products}}
+{{description}}
+First detected: {{first_seen}} | Articles: {{article_count}}
+{{/each}}
+
+SYSTEM PERFORMANCE:
+- Processing Latency: {{avg_processing_time}} ({{latency_trend}})
+- Error Rate: {{error_rate}}% ({{error_trend}})
+- Feed Availability: {{feed_availability}}%
+- Storage Usage: {{storage_usage}} ({{storage_trend}})
+
+RECOMMENDATIONS:
+{{#each recommendations}}
+- {{recommendation}}
+{{/each}}
+
+---
+This weekly summary is generated automatically by ${project_name}.
+For detailed analysis and historical data, visit: {{dashboard_url}}

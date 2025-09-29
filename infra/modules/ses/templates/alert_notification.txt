@@ -1,0 +1,50 @@
+${project_name} SECURITY ALERT
+
+🚨 IMMEDIATE ATTENTION REQUIRED 🚨
+
+ALERT DETAILS:
+Type: {{alert_type}}
+Severity: {{alert_severity}}
+Article: {{article_title}}
+Source: {{source}}
+Published: {{published_at}}
+Detected: {{detected_at}}
+Relevancy Score: {{relevancy_score}}
+
+ALERT SUMMARY:
+{{alert_summary}}
+
+ARTICLE SUMMARY:
+{{summary}}
+
+CRITICAL INFORMATION:
+{{#if cves}}CVEs: {{cves}}{{/if}}
+{{#if threat_actors}}Threat Actors: {{threat_actors}}{{/if}}
+{{#if malware}}Malware: {{malware}}{{/if}}
+{{#if affected_vendors}}Affected Vendors: {{affected_vendors}}{{/if}}
+{{#if affected_products}}Affected Products: {{affected_products}}{{/if}}
+{{#if impact_assessment}}Impact Assessment: {{impact_assessment}}{{/if}}
+
+{{#if recommended_actions}}
+RECOMMENDED ACTIONS:
+{{#each recommended_actions}}
+- {{action}}
+{{/each}}
+{{/if}}
+
+LINKS:
+Dashboard: {{dashboard_url}}
+{{#if review_url}}Review: {{review_url}}{{/if}}
+Original Article: {{article_url}}
+
+{{#if related_articles}}
+RELATED ARTICLES:
+{{#each related_articles}}
+- {{title}} ({{source}}): {{url}}
+{{/each}}
+{{/if}}
+
+---
+Alert ID: {{alert_id}} | Generated: {{generated_at}}
+This is a high-priority alert from ${project_name} Cybersecurity Triage System.
+If this is a false positive, please update the system configuration.

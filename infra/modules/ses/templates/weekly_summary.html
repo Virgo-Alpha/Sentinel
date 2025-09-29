@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sentinel Weekly Summary</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 700px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #f3e5f5; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .content { background-color: #ffffff; padding: 20px; border: 1px solid #dee2e6; border-radius: 5px; }
+        .footer { margin-top: 20px; padding: 10px; font-size: 12px; color: #6c757d; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-box { text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
+        .trend-up { color: #28a745; }
+        .trend-down { color: #dc3545; }
+        .chart-placeholder { background-color: #f8f9fa; height: 200px; display: flex; align-items: center; justify-content: center; border-radius: 5px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📈 ${project_name} Weekly Summary</h1>
+            <p>Week of {{week_start}} - {{week_end}}</p>
+        </div>
+        
+        <div class="content">
+            <h2>📊 Weekly Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <h3>{{total_articles}}</h3>
+                    <p>Total Articles</p>
+                    <small class="{{total_trend_class}}">{{total_trend}}</small>
+                </div>
+                <div class="stat-box">
+                    <h3>{{published_articles}}</h3>
+                    <p>Published</p>
+                    <small class="{{published_trend_class}}">{{published_trend}}</small>
+                </div>
+                <div class="stat-box">
+                    <h3>{{avg_relevancy}}</h3>
+                    <p>Avg Relevancy</p>
+                    <small class="{{relevancy_trend_class}}">{{relevancy_trend}}</small>
+                </div>
+                <div class="stat-box">
+                    <h3>{{duplicate_rate}}%</h3>
+                    <p>Duplicate Rate</p>
+                    <small class="{{duplicate_trend_class}}">{{duplicate_trend}}</small>
+                </div>
+                <div class="stat-box">
+                    <h3>{{review_rate}}%</h3>
+                    <p>Review Rate</p>
+                    <small class="{{review_trend_class}}">{{review_trend}}</small>
+                </div>
+                <div class="stat-box">
+                    <h3>{{response_time}}</h3>
+                    <p>Avg Response Time</p>
+                    <small class="{{response_trend_class}}">{{response_trend}}</small>
+                </div>
+            </div>
+            
+            <h2>🔍 Top Trending Keywords</h2>
+            <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                <tr style="background-color: #f8f9fa;">
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">Keyword</th>
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">Mentions</th>
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">Trend</th>
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">Articles</th>
+                </tr>
+                {{#each trending_keywords}}
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>{{keyword}}</strong></td>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;">{{mentions}}</td>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;" class="{{trend_class}}">{{trend}}</td>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;">{{articles}}</td>
+                </tr>
+                {{/each}}
+            </table>
+            
+            <h2>🏆 Most Active Sources</h2>
+            <ul>
+                {{#each top_sources}}
+                <li><strong>{{source}}</strong>: {{count}} articles ({{percentage}}% of total)</li>
+                {{/each}}
+            </ul>
+            
+            <h2>⚠️ Notable Security Events</h2>
+            {{#each notable_events}}
+            <div style="border-left: 4px solid #dc3545; padding-left: 15px; margin: 15px 0;">
+                <h3>{{title}}</h3>
+                <p><strong>Impact:</strong> {{impact}} | <strong>Affected:</strong> {{affected_products}}</p>
+                <p>{{description}}</p>
+                <p><small>First detected: {{first_seen}} | Articles: {{article_count}}</small></p>
+            </div>
+            {{/each}}
+            
+            <h2>📋 System Performance</h2>
+            <ul>
+                <li><strong>Processing Latency:</strong> {{avg_processing_time}} ({{latency_trend}})</li>
+                <li><strong>Error Rate:</strong> {{error_rate}}% ({{error_trend}})</li>
+                <li><strong>Feed Availability:</strong> {{feed_availability}}%</li>
+                <li><strong>Storage Usage:</strong> {{storage_usage}} ({{storage_trend}})</li>
+            </ul>
+            
+            <h2>🎯 Recommendations</h2>
+            <ul>
+                {{#each recommendations}}
+                <li>{{recommendation}}</li>
+                {{/each}}
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>This weekly summary is generated automatically by ${project_name}.</p>
+            <p>For detailed analysis and historical data, visit the <a href="{{dashboard_url}}">dashboard</a>.</p>
+        </div>
+    </div>
+</body>
+</html>

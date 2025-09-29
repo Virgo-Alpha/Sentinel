@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sentinel Daily Digest</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 700px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #e3f2fd; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .content { background-color: #ffffff; padding: 20px; border: 1px solid #dee2e6; border-radius: 5px; }
+        .footer { margin-top: 20px; padding: 10px; font-size: 12px; color: #6c757d; }
+        .stats { display: flex; justify-content: space-around; margin: 20px 0; }
+        .stat-box { text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }
+        .article-item { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .article-item:last-child { border-bottom: none; }
+        .priority-high { border-left: 4px solid #dc3545; padding-left: 10px; }
+        .priority-medium { border-left: 4px solid #ffc107; padding-left: 10px; }
+        .priority-low { border-left: 4px solid #28a745; padding-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 ${project_name} Daily Digest</h1>
+            <p>Cybersecurity Intelligence Summary for {{date}}</p>
+        </div>
+        
+        <div class="content">
+            <div class="stats">
+                <div class="stat-box">
+                    <h3>{{total_articles}}</h3>
+                    <p>Articles Processed</p>
+                </div>
+                <div class="stat-box">
+                    <h3>{{published_articles}}</h3>
+                    <p>Published</p>
+                </div>
+                <div class="stat-box">
+                    <h3>{{review_articles}}</h3>
+                    <p>Under Review</p>
+                </div>
+                <div class="stat-box">
+                    <h3>{{keyword_hits}}</h3>
+                    <p>Keyword Matches</p>
+                </div>
+            </div>
+            
+            <h2>📈 Top Keywords Today</h2>
+            <ul>
+                {{#each top_keywords}}
+                <li><strong>{{keyword}}</strong>: {{count}} mentions</li>
+                {{/each}}
+            </ul>
+            
+            <h2>🔥 High Priority Articles</h2>
+            {{#each high_priority_articles}}
+            <div class="article-item priority-high">
+                <h3>{{title}}</h3>
+                <p><strong>Source:</strong> {{source}} | <strong>Score:</strong> {{relevancy_score}}</p>
+                <p>{{summary}}</p>
+                <p><a href="{{url}}">Read Article</a></p>
+            </div>
+            {{/each}}
+            
+            <h2>📋 Articles Requiring Review</h2>
+            {{#each review_articles}}
+            <div class="article-item priority-medium">
+                <h3>{{title}}</h3>
+                <p><strong>Source:</strong> {{source}} | <strong>Reason:</strong> {{review_reason}}</p>
+                <p>{{summary}}</p>
+                <p><a href="{{review_url}}">Review Article</a></p>
+            </div>
+            {{/each}}
+            
+            <h2>📊 Feed Performance</h2>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background-color: #f8f9fa;">
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">Feed</th>
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">Articles</th>
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">Published</th>
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">Success Rate</th>
+                </tr>
+                {{#each feed_stats}}
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;">{{feed_name}}</td>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;">{{total}}</td>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;">{{published}}</td>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;">{{success_rate}}%</td>
+                </tr>
+                {{/each}}
+            </table>
+        </div>
+        
+        <div class="footer">
+            <p>This daily digest is generated automatically by ${project_name}.</p>
+            <p>For detailed analysis, visit the <a href="{{dashboard_url}}">dashboard</a>.</p>
+        </div>
+    </div>
+</body>
+</html>

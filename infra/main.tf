@@ -71,6 +71,7 @@ module "vpc" {
   name_prefix        = local.name_prefix
   vpc_cidr          = var.vpc_cidr
   availability_zones = var.availability_zones
+  enable_opensearch  = var.enable_opensearch
   tags              = local.common_tags
 }
 
@@ -123,7 +124,11 @@ module "iam" {
   kms_key_arn         = module.kms.key_arn
   opensearch_arn      = var.enable_opensearch ? module.opensearch[0].collection_arn : null
   bedrock_model_id    = var.bedrock_model_id
-  tags                = local.common_tags
+  enable_vpc_access   = var.create_vpc
+  enable_bedrock_agents = var.enable_agents
+  enable_api_gateway  = var.enable_amplify
+  enable_ses         = var.enable_email_notifications
+  tags               = local.common_tags
 }
 
 # Lambda Module for functions
@@ -135,6 +140,10 @@ module "lambda" {
   memory_size          = var.lambda_memory_size
   timeout              = var.lambda_timeout
   enable_xray_tracing  = var.enable_xray_tracing
+  artifacts_bucket_name = module.s3.artifacts_bucket_name
+  content_bucket_arn   = module.s3.content_bucket_arn
+  kms_key_arn         = module.kms.key_arn
+  enable_api_gateway  = var.enable_amplify
   vpc_config = var.create_vpc ? {
     subnet_ids         = module.vpc[0].private_subnet_ids
     security_group_ids = [module.vpc[0].lambda_security_group_id]
@@ -183,7 +192,8 @@ module "step_functions" {
   execution_role_arn    = module.iam.step_functions_role_arn
   lambda_function_arns  = module.lambda.function_arns
   enable_agents        = var.enable_agents
-  tags                 = local.common_tags
+  kms_key_arn         = module.kms.key_arn
+  tags                = local.common_tags
 }
 
 # EventBridge Module for scheduling
@@ -192,8 +202,10 @@ module "eventbridge" {
   
   name_prefix              = local.name_prefix
   state_machine_arn        = module.step_functions.ingestion_state_machine_arn
+  notifier_lambda_arn      = module.lambda.function_arns["notifier"]
   max_concurrent_feeds     = var.max_concurrent_feeds
-  tags                     = local.common_tags
+  kms_key_arn             = module.kms.key_arn
+  tags                    = local.common_tags
 }
 
 # SES Module for notifications (conditional)
@@ -215,6 +227,8 @@ module "cognito" {
   source = "./modules/cognito"
   
   name_prefix = local.name_prefix
+  callback_urls = var.amplify_callback_urls
+  logout_urls   = var.amplify_logout_urls
   tags        = local.common_tags
 }
 
@@ -224,9 +238,29 @@ module "api_gateway" {
   source = "./modules/api_gateway"
   
   name_prefix        = local.name_prefix
-  user_pool_id       = module.cognito[0].user_pool_id
-  lambda_function_arn = module.lambda.function_arns["analyst_assistant"]
-  tags               = local.common_tags
+  user_pool_arn      = module.cognito[0].user_pool_arn
+  analyst_assistant_lambda_arn = module.lambda.function_arns["analyst_assistant"]
+  analyst_assistant_lambda_invoke_arn = module.lambda.function_invoke_arns["analyst_assistant"]
+  query_kb_lambda_arn = module.lambda.function_arns["query_kb"]
+  query_kb_lambda_invoke_arn = module.lambda.function_invoke_arns["query_kb"]
+  storage_tool_lambda_arn = module.lambda.function_arns["storage_tool"]
+  storage_tool_lambda_invoke_arn = module.lambda.function_invoke_arns["storage_tool"]
+  commentary_api_lambda_arn = module.lambda.function_arns["commentary_api"]
+  commentary_api_lambda_invoke_arn = module.lambda.function_invoke_arns["commentary_api"]
+  publish_decision_lambda_arn = module.lambda.function_arns["publish_decision"]
+  publish_decision_lambda_invoke_arn = module.lambda.function_invoke_arns["publish_decision"]
+  kms_key_arn       = module.kms.key_arn
+  tags              = local.common_tags
+}
+
+# WAF Module for web application firewall (conditional)
+module "waf" {
+  count  = var.enable_amplify ? 1 : 0
+  source = "./modules/waf"
+  
+  name_prefix = local.name_prefix
+  kms_key_arn = module.kms.key_arn
+  tags        = local.common_tags
 }
 
 # Amplify Module for web application (conditional)
@@ -235,10 +269,13 @@ module "amplify" {
   source = "./modules/amplify"
   
   name_prefix           = local.name_prefix
+  repository_url        = var.amplify_repository_url
   user_pool_id          = module.cognito[0].user_pool_id
   user_pool_client_id   = module.cognito[0].user_pool_client_id
+  identity_pool_id      = module.cognito[0].identity_pool_id
   api_gateway_url       = module.api_gateway[0].api_url
-  tags                  = local.common_tags
+  kms_key_arn          = module.kms.key_arn
+  tags                 = local.common_tags
 }
 
 # Bedrock Agents Module (conditional)
@@ -263,5 +300,6 @@ module "monitoring" {
   enable_detailed_monitoring = var.enable_detailed_monitoring
   log_retention_days       = var.log_retention_days
   alert_emails            = var.alert_emails
+  kms_key_arn             = module.kms.key_arn
   tags                    = local.common_tags
 }

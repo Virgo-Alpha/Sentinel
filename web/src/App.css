@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.App {
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+/* Amplify UI customizations */
+[data-amplify-authenticator] {
+  --amplify-colors-brand-primary-60: #2563eb;
+  --amplify-colors-brand-primary-80: #1d4ed8;
+  --amplify-colors-brand-primary-90: #1e40af;
+  --amplify-colors-brand-primary-100: #1e3a8a;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Loading spinner */
+.spinner {
+  border: 2px solid #f3f4f6;
+  border-top: 2px solid #2563eb;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Status badges */
+.status-published {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+.status-review {
+  @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+}
+
+.status-archived {
+  @apply bg-gray-100 text-gray-800 border-gray-200;
+}
+
+.status-ingested {
+  @apply bg-blue-100 text-blue-800 border-blue-200;
+}
+
+/* Priority indicators */
+.priority-high {
+  @apply border-l-4 border-red-500;
+}
+
+.priority-medium {
+  @apply border-l-4 border-yellow-500;
+}
+
+.priority-low {
+  @apply border-l-4 border-green-500;
+}

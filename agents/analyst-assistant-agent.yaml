@@ -1,0 +1,553 @@
+name: sentinel-analyst-assistant
+version: "1.0.0"
+description: "Interactive cybersecurity intelligence assistant for security analysts"
+
+# Model configuration
+model:
+  provider: "bedrock"
+  model_id: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+  temperature: 0.2
+  max_tokens: 4000
+
+# Agent instructions and behavior
+instructions: |
+  You are a helpful cybersecurity intelligence assistant designed to help security analysts query, analyze, and report on cybersecurity intelligence data.
+  
+  Your primary capabilities:
+  1. Process natural language queries about cybersecurity intelligence
+  2. Search and retrieve relevant articles from the knowledge base
+  3. Generate comprehensive reports with keyword analysis
+  4. Assist with human review workflows and decision making
+  5. Provide insights on cybersecurity trends and patterns
+  6. Manage comments and collaborative discussions
+  7. Export data in various formats (XLSX, JSON, CSV)
+  
+  Query processing workflow:
+  1. Understand user intent from natural language queries
+  2. Translate queries to appropriate database searches
+  3. Use query_kb tool to search articles and intelligence data
+  4. Format results with source citations and context
+  5. Provide actionable insights and recommendations
+  6. Offer export options when appropriate
+  
+  Interaction principles:
+  - Always cite sources with links to original articles
+  - Provide keyword hit counts and match descriptions
+  - Sort results by relevance and recency
+  - Offer follow-up questions and related searches
+  - Maintain conversation context and history
+  - Be helpful, accurate, and security-focused
+  
+  When handling queries:
+  - Ask clarifying questions if the request is ambiguous
+  - Suggest filters (date ranges, keywords, sources) to refine searches
+  - Explain your reasoning and methodology
+  - Highlight important findings and potential impacts
+  - Recommend next steps or additional research areas
+  
+  For report generation:
+  - Include comprehensive keyword analysis
+  - Provide executive summaries and detailed findings
+  - Use structured formats with clear sections
+  - Add metadata like search parameters and result counts
+  - Offer multiple export formats based on user needs
+
+# Tool definitions
+tools:
+  - name: query_kb
+    description: "Search the cybersecurity intelligence knowledge base with natural language queries"
+    lambda_function: "sentinel-query-kb"
+    parameters:
+      query:
+        type: string
+        description: "Natural language search query"
+        required: true
+      filters:
+        type: object
+        description: "Search filters and parameters"
+        properties:
+          date_range:
+            type: object
+            properties:
+              start:
+                type: string
+                description: "Start date (ISO8601)"
+              end:
+                type: string
+                description: "End date (ISO8601)"
+          keywords:
+            type: array
+            description: "Specific keywords to search for"
+            items:
+              type: string
+          categories:
+            type: array
+            description: "Article categories to include"
+            items:
+              type: string
+          sources:
+            type: array
+            description: "Specific sources to search"
+            items:
+              type: string
+          relevancy_threshold:
+            type: number
+            description: "Minimum relevancy score"
+          include_duplicates:
+            type: boolean
+            description: "Whether to include duplicate articles"
+        required: false
+      export_format:
+        type: string
+        description: "Export format (xlsx, json, csv)"
+        enum: ["xlsx", "json", "csv"]
+        required: false
+      limit:
+        type: integer
+        description: "Maximum number of results to return"
+        required: false
+    returns:
+      type: object
+      properties:
+        articles:
+          type: array
+          items:
+            type: object
+            properties:
+              article_id:
+                type: string
+              title:
+                type: string
+              url:
+                type: string
+              published_at:
+                type: string
+              source:
+                type: string
+              keyword_matches:
+                type: array
+                items:
+                  type: string
+              hit_count:
+                type: integer
+              description:
+                type: string
+              relevancy_score:
+                type: number
+              entities:
+                type: object
+              tags:
+                type: array
+                items:
+                  type: string
+        total_results:
+          type: integer
+        search_metadata:
+          type: object
+        export_url:
+          type: string
+
+  - name: get_duplicates
+    description: "Retrieve duplicate articles and clustering information"
+    lambda_function: "sentinel-get-duplicates"
+    parameters:
+      article_id:
+        type: string
+        description: "Article ID to find duplicates for"
+        required: false
+      cluster_id:
+        type: string
+        description: "Cluster ID to retrieve all articles in cluster"
+        required: false
+      limit:
+        type: integer
+        description: "Maximum number of duplicates to return"
+        required: false
+    returns:
+      type: object
+      properties:
+        canonical_article:
+          type: object
+        duplicates:
+          type: array
+          items:
+            type: object
+        cluster_info:
+          type: object
+        similarity_scores:
+          type: array
+
+  - name: get_escalations
+    description: "Retrieve articles in human review queue"
+    lambda_function: "sentinel-get-escalations"
+    parameters:
+      status:
+        type: string
+        description: "Escalation status filter"
+        enum: ["pending", "in_review", "completed"]
+        required: false
+      priority:
+        type: string
+        description: "Priority level filter"
+        enum: ["low", "medium", "high", "critical"]
+        required: false
+      assigned_to:
+        type: string
+        description: "Filter by assigned reviewer"
+        required: false
+      limit:
+        type: integer
+        description: "Maximum number of escalations to return"
+        required: false
+    returns:
+      type: object
+      properties:
+        escalations:
+          type: array
+          items:
+            type: object
+            properties:
+              article_id:
+                type: string
+              escalation_reason:
+                type: string
+              priority:
+                type: string
+              created_at:
+                type: string
+              assigned_to:
+                type: string
+              status:
+                type: string
+              context:
+                type: object
+        queue_stats:
+          type: object
+
+  - name: publish_decision
+    description: "Process human review decisions (approve/reject/edit)"
+    lambda_function: "sentinel-publish-decision"
+    parameters:
+      article_id:
+        type: string
+        description: "Article ID being reviewed"
+        required: true
+      decision:
+        type: string
+        description: "Review decision"
+        enum: ["approve", "reject", "edit"]
+        required: true
+      reviewer_id:
+        type: string
+        description: "ID of the reviewing analyst"
+        required: true
+      comments:
+        type: string
+        description: "Review comments and rationale"
+        required: false
+      edits:
+        type: object
+        description: "Edits to article content (if decision is 'edit')"
+        properties:
+          title:
+            type: string
+          summary_short:
+            type: string
+          summary_card:
+            type: string
+          tags:
+            type: array
+            items:
+              type: string
+        required: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+        new_state:
+          type: string
+        published_at:
+          type: string
+        decision_id:
+          type: string
+
+  - name: commentary_api
+    description: "Manage comments and collaborative discussions on articles"
+    lambda_function: "sentinel-commentary-api"
+    parameters:
+      operation:
+        type: string
+        description: "Commentary operation"
+        enum: ["create", "update", "delete", "list", "search"]
+        required: true
+      article_id:
+        type: string
+        description: "Article ID for the comment"
+        required: true
+      comment_id:
+        type: string
+        description: "Comment ID (for update/delete operations)"
+        required: false
+      content:
+        type: string
+        description: "Comment content"
+        required: false
+      author_id:
+        type: string
+        description: "Comment author ID"
+        required: false
+      parent_comment_id:
+        type: string
+        description: "Parent comment ID for threaded discussions"
+        required: false
+      visibility:
+        type: string
+        description: "Comment visibility level"
+        enum: ["public", "team", "private"]
+        required: false
+    returns:
+      type: object
+      properties:
+        success:
+          type: boolean
+        comment_id:
+          type: string
+        comments:
+          type: array
+          items:
+            type: object
+            properties:
+              comment_id:
+                type: string
+              content:
+                type: string
+              author_id:
+                type: string
+              created_at:
+                type: string
+              updated_at:
+                type: string
+              parent_comment_id:
+                type: string
+              visibility:
+                type: string
+
+  - name: alert_status
+    description: "Check and manage alert and notification status"
+    lambda_function: "sentinel-alert-status"
+    parameters:
+      operation:
+        type: string
+        description: "Alert operation"
+        enum: ["list", "acknowledge", "escalate", "resolve"]
+        required: true
+      alert_id:
+        type: string
+        description: "Specific alert ID"
+        required: false
+      alert_type:
+        type: string
+        description: "Type of alerts to retrieve"
+        enum: ["system", "content", "security", "performance"]
+        required: false
+      status:
+        type: string
+        description: "Alert status filter"
+        enum: ["active", "acknowledged", "resolved"]
+        required: false
+      limit:
+        type: integer
+        description: "Maximum number of alerts to return"
+        required: false
+    returns:
+      type: object
+      properties:
+        alerts:
+          type: array
+          items:
+            type: object
+            properties:
+              alert_id:
+                type: string
+              alert_type:
+                type: string
+              severity:
+                type: string
+              message:
+                type: string
+              created_at:
+                type: string
+              status:
+                type: string
+              acknowledged_by:
+                type: string
+        alert_summary:
+          type: object
+
+# Deployment configuration
+deployment:
+  target: "bedrock-agentcore"
+  region: "us-east-1"
+  
+  # IAM execution role
+  execution_role: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/SentinelAnalystAssistantRole"
+  
+  # API Gateway integration
+  api_integration:
+    enabled: true
+    cors_enabled: true
+    authentication: "cognito"
+    throttling:
+      rate_limit: 1000
+      burst_limit: 2000
+  
+  # Resource configuration
+  memory_mb: 512
+  timeout_seconds: 300
+  
+  # VPC configuration
+  vpc_config:
+    subnet_ids:
+      - "${PRIVATE_SUBNET_1_ID}"
+      - "${PRIVATE_SUBNET_2_ID}"
+    security_group_ids:
+      - "${LAMBDA_SECURITY_GROUP_ID}"
+  
+  # Environment variables
+  environment:
+    DYNAMODB_ARTICLES_TABLE: "${DYNAMODB_ARTICLES_TABLE}"
+    DYNAMODB_COMMENTS_TABLE: "${DYNAMODB_COMMENTS_TABLE}"
+    DYNAMODB_MEMORY_TABLE: "${DYNAMODB_MEMORY_TABLE}"
+    S3_CONTENT_BUCKET: "${S3_CONTENT_BUCKET}"
+    S3_REPORTS_BUCKET: "${S3_REPORTS_BUCKET}"
+    OPENSEARCH_ENDPOINT: "${OPENSEARCH_ENDPOINT}"
+    KMS_KEY_ID: "${KMS_KEY_ID}"
+    POWERTOOLS_SERVICE_NAME: "sentinel-analyst-assistant"
+    LOG_LEVEL: "INFO"
+    ENABLE_XRAY_TRACING: "true"
+
+# Agent behavior configuration
+behavior:
+  # Conversation management
+  conversation:
+    session_timeout_minutes: 60
+    context_retention_messages: 50
+    memory_enabled: true
+  
+  # Response formatting
+  response:
+    max_articles_per_response: 25
+    include_source_citations: true
+    provide_follow_up_suggestions: true
+    format_for_readability: true
+  
+  # Query processing
+  query_processing:
+    auto_suggest_filters: true
+    expand_abbreviations: true
+    handle_typos: true
+    context_aware_search: true
+  
+  # Export capabilities
+  export:
+    supported_formats: ["xlsx", "json", "csv"]
+    include_metadata: true
+    batch_processing: true
+    signed_url_expiry_hours: 24
+
+# Session management
+session:
+  # Memory configuration
+  memory:
+    short_term_ttl_days: 60
+    conversation_history: true
+    user_preferences: true
+  
+  # State management
+  state:
+    maintain_search_context: true
+    remember_filters: true
+    track_export_history: true
+
+# Monitoring and observability
+monitoring:
+  cloudwatch_logs: true
+  xray_tracing: true
+  custom_metrics:
+    - "queries_processed"
+    - "response_time"
+    - "user_satisfaction"
+    - "export_requests"
+    - "search_accuracy"
+  
+  alarms:
+    - name: "high_response_time"
+      threshold: 5000
+      comparison: "GreaterThanThreshold"
+    - name: "low_user_satisfaction"
+      threshold: 0.8
+      comparison: "LessThanThreshold"
+
+# User interface integration
+ui_integration:
+  # Amplify app configuration
+  amplify:
+    app_name: "sentinel-dashboard"
+    branch: "main"
+    authentication_required: true
+  
+  # Chat interface settings
+  chat:
+    welcome_message: "Hello! I'm your cybersecurity intelligence assistant. I can help you search for threats, analyze trends, and generate reports. What would you like to know?"
+    suggested_queries:
+      - "Show me recent CVEs affecting Microsoft products"
+      - "Find articles about ransomware from the last week"
+      - "Generate a report on AWS security vulnerabilities"
+      - "What are the trending cybersecurity topics this month?"
+    
+    response_formatting:
+      use_markdown: true
+      include_charts: false
+      max_response_length: 2000
+  
+  # Dashboard integration
+  dashboard:
+    real_time_updates: true
+    notification_badges: true
+    quick_actions: ["Search", "Export", "Review Queue", "Alerts"]
+
+# Security configuration
+security:
+  # Input validation
+  input_validation:
+    sanitize_queries: true
+    max_query_length: 1000
+    blocked_patterns: ["script", "eval", "exec"]
+  
+  # Output filtering
+  output_filtering:
+    redact_pii: true
+    filter_sensitive_data: true
+    validate_urls: true
+  
+  # Access control
+  access_control:
+    role_based_filtering: true
+    audit_all_queries: true
+    rate_limiting: true
+
+# Testing configuration
+testing:
+  unit_tests: true
+  integration_tests: true
+  user_acceptance_tests: true
+  
+  test_queries:
+    - "Find recent security advisories"
+    - "Show me articles about phishing attacks"
+    - "Generate a weekly security report"
+    - "What CVEs were published yesterday?"
+  
+  mock_responses: true
+  performance_tests: true

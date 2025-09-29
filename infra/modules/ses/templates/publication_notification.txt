@@ -1,0 +1,30 @@
+${project_name} - New Article Published
+
+A new cybersecurity article has been published to the intelligence feed.
+
+ARTICLE DETAILS:
+Title: {{article_title}}
+Source: {{source}}
+Published: {{published_at}}
+URL: {{article_url}}
+
+ANALYSIS RESULTS:
+Relevancy Score: {{relevancy_score}}
+Keyword Matches: {{keyword_matches}}
+Publication Method: {{publication_method}}
+
+SUMMARY:
+{{summary}}
+
+KEY INFORMATION:
+{{#if cves}}CVEs: {{cves}}{{/if}}
+{{#if threat_actors}}Threat Actors: {{threat_actors}}{{/if}}
+{{#if malware}}Malware: {{malware}}{{/if}}
+{{#if vendors}}Affected Vendors: {{vendors}}{{/if}}
+{{#if products}}Affected Products: {{products}}{{/if}}
+
+View in Dashboard: {{dashboard_url}}
+
+---
+This is an automated notification from ${project_name} Cybersecurity Triage System.
+To manage your notification preferences, visit the dashboard.

@@ -105,6 +105,11 @@ variable "ses_sender_email" {
   description = "SES sender email address"
   type        = string
   default     = "noreply@sentinel.local"
+  
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.ses_sender_email))
+    error_message = "SES sender email must be a valid email address."
+  }
 }
 
 variable "escalation_emails" {
@@ -130,18 +135,33 @@ variable "max_concurrent_feeds" {
   description = "Maximum number of feeds to process concurrently"
   type        = number
   default     = 5
+  
+  validation {
+    condition     = var.max_concurrent_feeds >= 1 && var.max_concurrent_feeds <= 50
+    error_message = "Concurrent feeds must be between 1 and 50."
+  }
 }
 
 variable "max_articles_per_fetch" {
   description = "Maximum articles to fetch per feed"
   type        = number
   default     = 50
+  
+  validation {
+    condition     = var.max_articles_per_fetch >= 5 && var.max_articles_per_fetch <= 500
+    error_message = "Articles per fetch must be between 5 and 500."
+  }
 }
 
 variable "content_retention_days" {
   description = "Number of days to retain content in S3"
   type        = number
   default     = 365
+  
+  validation {
+    condition     = var.content_retention_days >= 30 && var.content_retention_days <= 2555
+    error_message = "Content retention must be between 30 and 2555 days (7 years)."
+  }
 }
 
 # Thresholds
@@ -183,12 +203,22 @@ variable "max_daily_llm_calls" {
   description = "Maximum LLM API calls per day"
   type        = number
   default     = 10000
+  
+  validation {
+    condition     = var.max_daily_llm_calls >= 100 && var.max_daily_llm_calls <= 100000
+    error_message = "Daily LLM calls must be between 100 and 100,000."
+  }
 }
 
 variable "max_monthly_cost_usd" {
   description = "Maximum monthly AWS costs (USD)"
   type        = number
   default     = 1000.0
+  
+  validation {
+    condition     = var.max_monthly_cost_usd >= 50.0 && var.max_monthly_cost_usd <= 50000.0
+    error_message = "Monthly cost limit must be between $50 and $50,000."
+  }
 }
 
 # Bedrock Configuration
@@ -215,12 +245,22 @@ variable "vpc_cidr" {
   description = "CIDR block for VPC"
   type        = string
   default     = "10.0.0.0/16"
+  
+  validation {
+    condition     = can(cidrhost(var.vpc_cidr, 0))
+    error_message = "VPC CIDR must be a valid IPv4 CIDR block."
+  }
 }
 
 variable "availability_zones" {
   description = "Availability zones for subnet deployment"
   type        = list(string)
   default     = ["us-east-1a", "us-east-1b"]
+  
+  validation {
+    condition     = length(var.availability_zones) >= 2 && length(var.availability_zones) <= 6
+    error_message = "Must specify between 2 and 6 availability zones."
+  }
 }
 
 # Monitoring Configuration
@@ -240,6 +280,32 @@ variable "log_retention_days" {
   description = "CloudWatch log retention in days"
   type        = number
   default     = 30
+  
+  validation {
+    condition = contains([
+      1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653
+    ], var.log_retention_days)
+    error_message = "Log retention days must be a valid CloudWatch retention period."
+  }
+}
+
+# Amplify Configuration
+variable "amplify_repository_url" {
+  description = "Git repository URL for Amplify app"
+  type        = string
+  default     = ""
+}
+
+variable "amplify_callback_urls" {
+  description = "Callback URLs for Cognito authentication"
+  type        = list(string)
+  default     = ["http://localhost:3000/callback"]
+}
+
+variable "amplify_logout_urls" {
+  description = "Logout URLs for Cognito authentication"
+  type        = list(string)
+  default     = ["http://localhost:3000/logout"]
 }
 
 # Tags

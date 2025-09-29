@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sentinel Alert</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #f8d7da; padding: 20px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #f5c6cb; }
+        .content { background-color: #ffffff; padding: 20px; border: 1px solid #dee2e6; border-radius: 5px; }
+        .footer { margin-top: 20px; padding: 10px; font-size: 12px; color: #6c757d; }
+        .button { display: inline-block; padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px; }
+        .alert-critical { background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .alert-high { background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .metadata { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .severity-critical { color: #721c24; font-weight: bold; }
+        .severity-high { color: #856404; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 ${project_name} Security Alert</h1>
+            <p class="severity-{{alert_severity}}">{{alert_type}} - {{alert_severity}} Severity</p>
+        </div>
+        
+        <div class="content">
+            <div class="alert-{{alert_severity}}">
+                <strong>⚠️ IMMEDIATE ATTENTION REQUIRED</strong><br>
+                This alert requires immediate review and potential action.
+            </div>
+            
+            <h2>{{article_title}}</h2>
+            
+            <div class="metadata">
+                <p><strong>Alert Type:</strong> {{alert_type}}</p>
+                <p><strong>Severity:</strong> <span class="severity-{{alert_severity}}">{{alert_severity}}</span></p>
+                <p><strong>Source:</strong> {{source}}</p>
+                <p><strong>Published:</strong> {{published_at}}</p>
+                <p><strong>Detected:</strong> {{detected_at}}</p>
+                <p><strong>Relevancy Score:</strong> {{relevancy_score}}</p>
+            </div>
+            
+            <h3>Alert Summary</h3>
+            <p>{{alert_summary}}</p>
+            
+            <h3>Article Summary</h3>
+            <p>{{summary}}</p>
+            
+            <h3>Critical Information</h3>
+            <ul>
+                {{#if cves}}<li><strong>CVEs:</strong> <span style="color: #dc3545;">{{cves}}</span></li>{{/if}}
+                {{#if threat_actors}}<li><strong>Threat Actors:</strong> {{threat_actors}}</li>{{/if}}
+                {{#if malware}}<li><strong>Malware:</strong> {{malware}}</li>{{/if}}
+                {{#if affected_vendors}}<li><strong>Affected Vendors:</strong> <span style="color: #dc3545;">{{affected_vendors}}</span></li>{{/if}}
+                {{#if affected_products}}<li><strong>Affected Products:</strong> <span style="color: #dc3545;">{{affected_products}}</span></li>{{/if}}
+                {{#if impact_assessment}}<li><strong>Impact Assessment:</strong> {{impact_assessment}}</li>{{/if}}
+            </ul>
+            
+            {{#if recommended_actions}}
+            <h3>Recommended Actions</h3>
+            <ul>
+                {{#each recommended_actions}}
+                <li>{{action}}</li>
+                {{/each}}
+            </ul>
+            {{/if}}
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{dashboard_url}}" class="button">View in Dashboard</a>
+                {{#if review_url}}<a href="{{review_url}}" class="button" style="margin-left: 10px;">Review Article</a>{{/if}}
+            </div>
+            
+            <p><strong>Original Article:</strong> <a href="{{article_url}}">{{article_url}}</a></p>
+            
+            {{#if related_articles}}
+            <h3>Related Articles</h3>
+            <ul>
+                {{#each related_articles}}
+                <li><a href="{{url}}">{{title}}</a> ({{source}})</li>
+                {{/each}}
+            </ul>
+            {{/if}}
+        </div>
+        
+        <div class="footer">
+            <p><strong>This is a high-priority alert from ${project_name} Cybersecurity Triage System.</strong></p>
+            <p>Alert ID: {{alert_id}} | Generated: {{generated_at}}</p>
+            <p>If this is a false positive, please update the system configuration.</p>
+        </div>
+    </div>
+</body>
+</html>
