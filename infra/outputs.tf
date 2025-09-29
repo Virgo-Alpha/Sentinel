@@ -176,20 +176,20 @@ output "cloudwatch_dashboard_url" {
 output "environment_variables" {
   description = "Environment variables for Lambda functions and applications"
   value = {
-    AWS_REGION                    = var.aws_region
-    ENVIRONMENT                   = var.environment
-    PROJECT_NAME                  = var.project_name
-    ARTICLES_TABLE               = module.dynamodb.articles_table_name
-    COMMENTS_TABLE               = module.dynamodb.comments_table_name
-    MEMORY_TABLE                 = module.dynamodb.memory_table_name
-    CONTENT_BUCKET               = module.s3.content_bucket_name
-    ARTIFACTS_BUCKET             = module.s3.artifacts_bucket_name
-    TRACES_BUCKET                = module.s3.traces_bucket_name
-    OPENSEARCH_ENDPOINT          = var.enable_opensearch ? module.opensearch[0].endpoint : ""
-    OPENSEARCH_INDEX_ARTICLES    = "sentinel-articles"
-    OPENSEARCH_INDEX_VECTORS     = "sentinel-vectors"
-    BEDROCK_MODEL_ID             = var.bedrock_model_id
-    BEDROCK_EMBEDDING_MODEL      = var.bedrock_embedding_model
+    AWS_REGION                  = var.aws_region
+    ENVIRONMENT                 = var.environment
+    PROJECT_NAME                = var.project_name
+    ARTICLES_TABLE              = module.dynamodb.articles_table_name
+    COMMENTS_TABLE              = module.dynamodb.comments_table_name
+    MEMORY_TABLE                = module.dynamodb.memory_table_name
+    CONTENT_BUCKET              = module.s3.content_bucket_name
+    ARTIFACTS_BUCKET            = module.s3.artifacts_bucket_name
+    TRACES_BUCKET               = module.s3.traces_bucket_name
+    OPENSEARCH_ENDPOINT         = var.enable_opensearch ? module.opensearch[0].endpoint : ""
+    OPENSEARCH_INDEX_ARTICLES   = "sentinel-articles"
+    OPENSEARCH_INDEX_VECTORS    = "sentinel-vectors"
+    BEDROCK_MODEL_ID            = var.bedrock_model_id
+    BEDROCK_EMBEDDING_MODEL     = var.bedrock_embedding_model
     INGESTOR_AGENT_ID           = var.enable_agents ? module.bedrock_agents[0].ingestor_agent_id : ""
     ANALYST_AGENT_ID            = var.enable_agents ? module.bedrock_agents[0].analyst_agent_id : ""
     INGESTION_STATE_MACHINE_ARN = module.step_functions.ingestion_state_machine_arn
@@ -200,16 +200,16 @@ output "environment_variables" {
     RELEVANCE_THRESHOLD         = var.relevance_threshold
     SIMILARITY_THRESHOLD        = var.similarity_threshold
     CONFIDENCE_THRESHOLD        = var.confidence_threshold
-    MAX_DAILY_LLM_CALLS        = var.max_daily_llm_calls
-    MAX_MONTHLY_COST_USD       = var.max_monthly_cost_usd
-    ENABLE_AGENTS              = var.enable_agents
-    ENABLE_AMPLIFY             = var.enable_amplify
-    ENABLE_OPENSEARCH          = var.enable_opensearch
-    ENABLE_SEMANTIC_DEDUP      = var.enable_semantic_dedup
-    ENABLE_LLM_RELEVANCE       = var.enable_llm_relevance
-    ENABLE_AUTO_PUBLISH        = var.enable_auto_publish
-    ENABLE_EMAIL_NOTIFICATIONS = var.enable_email_notifications
-    ENABLE_XRAY_TRACING        = var.enable_xray_tracing
+    MAX_DAILY_LLM_CALLS         = var.max_daily_llm_calls
+    MAX_MONTHLY_COST_USD        = var.max_monthly_cost_usd
+    ENABLE_AGENTS               = var.enable_agents
+    ENABLE_AMPLIFY              = var.enable_amplify
+    ENABLE_OPENSEARCH           = var.enable_opensearch
+    ENABLE_SEMANTIC_DEDUP       = var.enable_semantic_dedup
+    ENABLE_LLM_RELEVANCE        = var.enable_llm_relevance
+    ENABLE_AUTO_PUBLISH         = var.enable_auto_publish
+    ENABLE_EMAIL_NOTIFICATIONS  = var.enable_email_notifications
+    ENABLE_XRAY_TRACING         = var.enable_xray_tracing
   }
   sensitive = false
 }
@@ -218,14 +218,14 @@ output "environment_variables" {
 output "deployment_info" {
   description = "Deployment information and next steps"
   value = {
-    environment           = var.environment
-    region               = var.aws_region
-    agents_enabled       = var.enable_agents
-    amplify_enabled      = var.enable_amplify
-    opensearch_enabled   = var.enable_opensearch
+    environment        = var.environment
+    region             = var.aws_region
+    agents_enabled     = var.enable_agents
+    amplify_enabled    = var.enable_amplify
+    opensearch_enabled = var.enable_opensearch
     next_steps = [
       "1. Configure RSS feeds in config/feeds.yaml",
-      "2. Update keywords in config/keywords.yaml", 
+      "2. Update keywords in config/keywords.yaml",
       "3. Set up SES email identities for notifications",
       var.enable_agents ? "4. Deploy Strands agents to Bedrock AgentCore" : "4. Enable agents when ready with enable_agents=true",
       var.enable_amplify ? "5. Configure Amplify app deployment" : "5. Enable Amplify when ready with enable_amplify=true",

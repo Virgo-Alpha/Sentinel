@@ -10,7 +10,7 @@ variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string
   default     = "dev"
-  
+
   validation {
     condition     = contains(["dev", "staging", "prod"], var.environment)
     error_message = "Environment must be one of: dev, staging, prod."
@@ -71,7 +71,7 @@ variable "lambda_memory_size" {
   description = "Memory size for Lambda functions (MB)"
   type        = number
   default     = 512
-  
+
   validation {
     condition     = var.lambda_memory_size >= 128 && var.lambda_memory_size <= 10240
     error_message = "Lambda memory size must be between 128 and 10240 MB."
@@ -82,7 +82,7 @@ variable "lambda_timeout" {
   description = "Timeout for Lambda functions (seconds)"
   type        = number
   default     = 300
-  
+
   validation {
     condition     = var.lambda_timeout >= 1 && var.lambda_timeout <= 900
     error_message = "Lambda timeout must be between 1 and 900 seconds."
@@ -93,7 +93,7 @@ variable "dynamodb_billing_mode" {
   description = "DynamoDB billing mode"
   type        = string
   default     = "PAY_PER_REQUEST"
-  
+
   validation {
     condition     = contains(["PAY_PER_REQUEST", "PROVISIONED"], var.dynamodb_billing_mode)
     error_message = "DynamoDB billing mode must be PAY_PER_REQUEST or PROVISIONED."
@@ -105,7 +105,7 @@ variable "ses_sender_email" {
   description = "SES sender email address"
   type        = string
   default     = "noreply@sentinel.local"
-  
+
   validation {
     condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.ses_sender_email))
     error_message = "SES sender email must be a valid email address."
@@ -135,7 +135,7 @@ variable "max_concurrent_feeds" {
   description = "Maximum number of feeds to process concurrently"
   type        = number
   default     = 5
-  
+
   validation {
     condition     = var.max_concurrent_feeds >= 1 && var.max_concurrent_feeds <= 50
     error_message = "Concurrent feeds must be between 1 and 50."
@@ -146,7 +146,7 @@ variable "max_articles_per_fetch" {
   description = "Maximum articles to fetch per feed"
   type        = number
   default     = 50
-  
+
   validation {
     condition     = var.max_articles_per_fetch >= 5 && var.max_articles_per_fetch <= 500
     error_message = "Articles per fetch must be between 5 and 500."
@@ -157,7 +157,7 @@ variable "content_retention_days" {
   description = "Number of days to retain content in S3"
   type        = number
   default     = 365
-  
+
   validation {
     condition     = var.content_retention_days >= 30 && var.content_retention_days <= 2555
     error_message = "Content retention must be between 30 and 2555 days (7 years)."
@@ -169,7 +169,7 @@ variable "relevance_threshold" {
   description = "Minimum relevance score for article consideration"
   type        = number
   default     = 0.7
-  
+
   validation {
     condition     = var.relevance_threshold >= 0.0 && var.relevance_threshold <= 1.0
     error_message = "Relevance threshold must be between 0.0 and 1.0."
@@ -180,7 +180,7 @@ variable "similarity_threshold" {
   description = "Minimum similarity score for duplicate detection"
   type        = number
   default     = 0.85
-  
+
   validation {
     condition     = var.similarity_threshold >= 0.0 && var.similarity_threshold <= 1.0
     error_message = "Similarity threshold must be between 0.0 and 1.0."
@@ -191,7 +191,7 @@ variable "confidence_threshold" {
   description = "Minimum confidence score for auto-actions"
   type        = number
   default     = 0.8
-  
+
   validation {
     condition     = var.confidence_threshold >= 0.0 && var.confidence_threshold <= 1.0
     error_message = "Confidence threshold must be between 0.0 and 1.0."
@@ -203,7 +203,7 @@ variable "max_daily_llm_calls" {
   description = "Maximum LLM API calls per day"
   type        = number
   default     = 10000
-  
+
   validation {
     condition     = var.max_daily_llm_calls >= 100 && var.max_daily_llm_calls <= 100000
     error_message = "Daily LLM calls must be between 100 and 100,000."
@@ -214,7 +214,7 @@ variable "max_monthly_cost_usd" {
   description = "Maximum monthly AWS costs (USD)"
   type        = number
   default     = 1000.0
-  
+
   validation {
     condition     = var.max_monthly_cost_usd >= 50.0 && var.max_monthly_cost_usd <= 50000.0
     error_message = "Monthly cost limit must be between $50 and $50,000."
@@ -245,7 +245,7 @@ variable "vpc_cidr" {
   description = "CIDR block for VPC"
   type        = string
   default     = "10.0.0.0/16"
-  
+
   validation {
     condition     = can(cidrhost(var.vpc_cidr, 0))
     error_message = "VPC CIDR must be a valid IPv4 CIDR block."
@@ -256,7 +256,7 @@ variable "availability_zones" {
   description = "Availability zones for subnet deployment"
   type        = list(string)
   default     = ["us-east-1a", "us-east-1b"]
-  
+
   validation {
     condition     = length(var.availability_zones) >= 2 && length(var.availability_zones) <= 6
     error_message = "Must specify between 2 and 6 availability zones."
@@ -280,7 +280,7 @@ variable "log_retention_days" {
   description = "CloudWatch log retention in days"
   type        = number
   default     = 30
-  
+
   validation {
     condition = contains([
       1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653

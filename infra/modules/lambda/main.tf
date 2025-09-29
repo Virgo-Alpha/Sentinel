@@ -32,7 +32,7 @@ locals {
       description = "Evaluate content relevance using LLM"
       handler     = "relevancy_evaluator.lambda_handler"
       runtime     = "python3.11"
-      timeout     = var.timeout * 2  # Longer timeout for LLM calls
+      timeout     = var.timeout * 2 # Longer timeout for LLM calls
       memory_size = var.memory_size * 2
     }
     dedup_tool = {
@@ -81,7 +81,7 @@ locals {
       description = "Interactive analyst assistant agent"
       handler     = "analyst_assistant.lambda_handler"
       runtime     = "python3.11"
-      timeout     = var.timeout * 3  # Longest timeout for interactive sessions
+      timeout     = var.timeout * 3 # Longest timeout for interactive sessions
       memory_size = var.memory_size * 2
     }
     publish_decision = {
@@ -107,10 +107,10 @@ data "archive_file" "lambda_packages" {
 
   type        = "zip"
   output_path = "${path.module}/../../artifacts/${each.key}.zip"
-  
+
   # Source from the src/lambda_tools directory
   source_dir = "${path.module}/../../../src/lambda_tools"
-  
+
   # Exclude files that shouldn't be in the package
   excludes = [
     "__pycache__",
@@ -143,16 +143,16 @@ resource "aws_lambda_function" "functions" {
 
   function_name = "${var.name_prefix}-${each.key}"
   description   = each.value.description
-  
+
   # S3 deployment
   s3_bucket = var.artifacts_bucket_name
   s3_key    = aws_s3_object.lambda_packages[each.key].key
-  
-  handler = each.value.handler
-  runtime = each.value.runtime
-  timeout = each.value.timeout
+
+  handler     = each.value.handler
+  runtime     = each.value.runtime
+  timeout     = each.value.timeout
   memory_size = each.value.memory_size
-  
+
   role = var.execution_role_arn
 
   # Environment variables
@@ -175,10 +175,10 @@ resource "aws_lambda_function" "functions" {
   }
 
   # Lambda Layers (including X-Ray correlation layer)
-  layers = compact([
-    var.xray_layer_arn != "" ? var.xray_layer_arn : null,
-    var.additional_layers != null ? var.additional_layers : null
-  ])
+  layers = compact(concat(
+    var.xray_layer_arn != "" ? [var.xray_layer_arn] : [],
+    var.additional_layers
+  ))
 
   # Dead letter queue configuration
   dead_letter_config {
@@ -201,10 +201,10 @@ resource "aws_sqs_queue" "lambda_dlq" {
   for_each = local.lambda_functions
 
   name = "${var.name_prefix}-${each.key}-dlq"
-  
+
   # Message retention
-  message_retention_seconds = 1209600  # 14 days
-  
+  message_retention_seconds = 1209600 # 14 days
+
   # Visibility timeout should be longer than Lambda timeout
   visibility_timeout_seconds = each.value.timeout + 30
 
@@ -234,7 +234,7 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 
 # Lambda Permissions for S3 trigger (artifacts bucket)
 resource "aws_lambda_permission" "s3_trigger" {
-  for_each = toset(["feed_parser", "storage_tool"])  # Functions that need S3 triggers
+  for_each = toset(["feed_parser", "storage_tool"]) # Functions that need S3 triggers
 
   statement_id  = "AllowExecutionFromS3Bucket"
   action        = "lambda:InvokeFunction"
@@ -245,7 +245,7 @@ resource "aws_lambda_permission" "s3_trigger" {
 
 # Lambda Permissions for EventBridge
 resource "aws_lambda_permission" "eventbridge_trigger" {
-  for_each = toset(["feed_parser"])  # Functions triggered by EventBridge
+  for_each = toset(["feed_parser"]) # Functions triggered by EventBridge
 
   statement_id  = "AllowExecutionFromEventBridge"
   action        = "lambda:InvokeFunction"
@@ -265,7 +265,7 @@ resource "aws_lambda_permission" "api_gateway_trigger" {
 
 # Lambda Function URLs (for direct HTTP access)
 resource "aws_lambda_function_url" "function_urls" {
-  for_each = toset(["analyst_assistant"])  # Only for functions that need direct HTTP access
+  for_each = toset(["analyst_assistant"]) # Only for functions that need direct HTTP access
 
   function_name      = aws_lambda_function.functions[each.key].function_name
   authorization_type = "AWS_IAM"
@@ -276,7 +276,7 @@ resource "aws_lambda_function_url" "function_urls" {
     allow_methods     = ["GET", "POST"]
     allow_headers     = ["date", "keep-alive"]
     expose_headers    = ["date", "keep-alive"]
-    max_age          = 86400
+    max_age           = 86400
   }
 }
 
@@ -326,7 +326,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
   namespace           = "AWS/Lambda"
   period              = "300"
   statistic           = "Average"
-  threshold           = each.value.timeout * 1000 * 0.8  # 80% of timeout in milliseconds
+  threshold           = each.value.timeout * 1000 * 0.8 # 80% of timeout in milliseconds
   alarm_description   = "This metric monitors lambda duration for ${each.key}"
   alarm_actions       = var.alarm_topic_arn != null ? [var.alarm_topic_arn] : []
 

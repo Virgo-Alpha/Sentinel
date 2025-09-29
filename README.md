@@ -85,17 +85,24 @@ cp .env.example .env
 # Edit .env with your AWS account details
 ```
 
-### 2. Bootstrap Terraform State
+### 2. Setup Terraform Backend
 
 ```bash
-cd infra/bootstrap
-terraform init
-terraform apply
+cd infra
 
-# Note the outputs for backend configuration
+# Option 1: Automated setup (recommended)
+./setup-backend.sh
+
+# Option 2: Manual setup
+# Copy and edit backend configuration
+cp backend.hcl.example backend.hcl
+# Edit backend.hcl with your S3 bucket and DynamoDB table names
+
+# Initialize Terraform with backend
+terraform init -backend-config=backend.hcl
 ```
 
-### 3. Configure Backend
+### 3. Deploy Infrastructure
 
 ```bash
 cd ../

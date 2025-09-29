@@ -1,31 +1,13 @@
 # Terraform remote state backend configuration
+# Note: The backend configuration cannot use variables or interpolation
+# You'll need to configure this with actual values during terraform init
+# Example: terraform init -backend-config="bucket=your-actual-bucket-name"
+
 terraform {
   backend "s3" {
-    bucket         = "sentinel-terraform-state-${random_id.state_suffix.hex}"
-    key            = "sentinel/terraform.tfstate"
-    region         = var.aws_region
-    dynamodb_table = "sentinel-terraform-locks"
-    encrypt        = true
-    
-    # These will be provided via terraform init -backend-config
-    # or environment variables
+    # These values must be provided via terraform init -backend-config
+    # or a backend.hcl file, as variables cannot be used here
+    key     = "sentinel/terraform.tfstate"
+    encrypt = true
   }
-  
-  required_version = ">= 1.5"
-  
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.1"
-    }
-  }
-}
-
-# Generate a random suffix for unique resource naming
-resource "random_id" "state_suffix" {
-  byte_length = 4
 }

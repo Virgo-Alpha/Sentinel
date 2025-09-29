@@ -1,0 +1,7 @@
+# Example backend configuration file
+# Copy this to backend.hcl and update with your actual values
+# Then run: terraform init -backend-config=backend.hcl
+
+bucket         = "your-terraform-state-bucket-name"
+region         = "us-east-1"
+dynamodb_table = "sentinel-terraform-locks"

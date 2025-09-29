@@ -14,7 +14,7 @@ variable "memory_size" {
   description = "Memory size for Lambda functions (MB)"
   type        = number
   default     = 512
-  
+
   validation {
     condition     = var.memory_size >= 128 && var.memory_size <= 10240
     error_message = "Memory size must be between 128 and 10240 MB."
@@ -25,7 +25,7 @@ variable "timeout" {
   description = "Timeout for Lambda functions (seconds)"
   type        = number
   default     = 300
-  
+
   validation {
     condition     = var.timeout >= 1 && var.timeout <= 900
     error_message = "Timeout must be between 1 and 900 seconds."
