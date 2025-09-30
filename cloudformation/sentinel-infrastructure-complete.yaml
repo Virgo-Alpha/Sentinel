@@ -100,7 +100,7 @@ Parameters:
   ContentRetentionDays:
     Type: Number
     Default: 365
-    MinValue: 30
+    MinValue: 91
     MaxValue: 2555
     Description: Number of days to retain content in S3
   
@@ -152,6 +152,22 @@ Parameters:
     Default: amazon.titan-embed-text-v1
     Description: Bedrock model ID for embeddings
   
+  # Amplify Configuration
+  AmplifyRepositoryUrl:
+    Type: String
+    Default: ''
+    Description: Git repository URL for Amplify app (leave empty to configure later)
+  
+  AmplifyCallbackUrls:
+    Type: CommaDelimitedList
+    Default: 'http://localhost:3000/callback,https://localhost:3000/callback'
+    Description: Callback URLs for Cognito authentication
+  
+  AmplifyLogoutUrls:
+    Type: CommaDelimitedList
+    Default: 'http://localhost:3000/logout,https://localhost:3000/logout'
+    Description: Logout URLs for Cognito authentication
+  
   # Monitoring Configuration
   EnableXRayTracing:
     Type: String
@@ -172,6 +188,9 @@ Conditions:
   EnableEmailNotificationsCondition: !Equals [!Ref EnableEmailNotifications, 'true']
   EnableAgentsCondition: !Equals [!Ref EnableAgents, 'true']
   EnableXRayTracingCondition: !Equals [!Ref EnableXRayTracing, 'true']
+  EnableAgentsAndOpenSearchCondition: !And
+    - !Equals [!Ref EnableAgents, 'true']
+    - !Equals [!Ref EnableOpenSearch, 'true']
 
 Resources:
   # Random Suffix for Unique Resource Naming
@@ -345,7 +364,7 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub '${ProjectName}-${Environment}-articles'
-      BillingMode: !Ref DynamoDBBillingMode
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: article_id
           AttributeType: S
@@ -367,7 +386,6 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
-          BillingMode: !Ref DynamoDBBillingMode
         - IndexName: cluster-published_at-index
           KeySchema:
             - AttributeName: cluster_id
@@ -376,9 +394,9 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
-          BillingMode: !Ref DynamoDBBillingMode
       SSESpecification:
         SSEEnabled: true
+        SSEType: KMS
         KMSMasterKeyId: !Ref KMSKey
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
@@ -413,9 +431,9 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
-          BillingMode: !Ref DynamoDBBillingMode
       SSESpecification:
         SSEEnabled: true
+        SSEType: KMS
         KMSMasterKeyId: !Ref KMSKey
       TimeToLiveSpecification:
         AttributeName: ttl
@@ -428,7 +446,7 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub '${ProjectName}-${Environment}-memory'
-      BillingMode: !Ref DynamoDBBillingMode
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: memory_id
           AttributeType: S
@@ -448,9 +466,9 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
-          BillingMode: !Ref DynamoDBBillingMode
       SSESpecification:
         SSEEnabled: true
+        SSEType: KMS
         KMSMasterKeyId: !Ref KMSKey
       TimeToLiveSpecification:
         AttributeName: ttl
@@ -489,9 +507,9 @@ Resources:
                   - s3:DeleteObject
                   - s3:ListBucket
                 Resource:
-                  - !Sub '${ContentBucket}/*'
-                  - !Sub '${ArtifactsBucket}/*'
-                  - !Sub '${TracesBucket}/*'
+                  - !Sub 'arn:aws:s3:::${ContentBucket}/*'
+                  - !Sub 'arn:aws:s3:::${ArtifactsBucket}/*'
+                  - !Sub 'arn:aws:s3:::${TracesBucket}/*'
                   - !GetAtt ContentBucket.Arn
                   - !GetAtt ArtifactsBucket.Arn
                   - !GetAtt TracesBucket.Arn
@@ -533,6 +551,27 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    'ses:FromAddress': !Ref SESenderEmail
+              - Effect: Allow
+                Action:
+                  - bedrock-agent-runtime:InvokeAgent
+                  - bedrock-agent-runtime:Retrieve
+                  - bedrock-agent-runtime:RetrieveAndGenerate
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - aoss:APIAccessAll
+                Resource: !If
+                  - EnableOpenSearchCondition
+                  - !GetAtt OpenSearchCollection.Arn
+                  - !Ref AWS::NoValue
       Tags:
         - Key: Name
           Value: !Sub '${ProjectName}-${Environment}-lambda-execution-role'
@@ -544,6 +583,1214 @@ Resources:
       LogGroupName: !Sub '/aws/lambda/${ProjectName}-${Environment}'
       RetentionInDays: !Ref LogRetentionDays
       KmsKeyId: !GetAtt KMSKey.Arn
+
+  # ============================================================================
+  # LAMBDA FUNCTIONS - STANDALONE AGENT IMPLEMENTATIONS
+  # ============================================================================
+
+  # Feed Parser Lambda Function
+  FeedParserFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-feed-parser'
+      Description: 'RSS feed parser with standalone agent implementation'
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: lambda-packages/feed-parser.zip
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+          ARTICLES_TABLE: !Ref ArticlesTable
+          CONTENT_BUCKET: !Ref ContentBucket
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          MAX_CONCURRENT_FEEDS: !Ref MaxConcurrentFeeds
+          KMS_KEY_ID: !Ref KMSKey
+      TracingConfig:
+        Mode: !If [EnableXRayTracingCondition, Active, PassThrough]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-feed-parser'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Relevancy Evaluator Lambda Function
+  RelevancyEvaluatorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-relevancy-evaluator'
+      Description: 'Article relevancy evaluator with AI-powered assessment'
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: lambda-packages/relevancy-evaluator.zip
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+          ARTICLES_TABLE: !Ref ArticlesTable
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          RELEVANCE_THRESHOLD: !Ref RelevanceThreshold
+          KMS_KEY_ID: !Ref KMSKey
+      TracingConfig:
+        Mode: !If [EnableXRayTracingCondition, Active, PassThrough]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-relevancy-evaluator'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Deduplication Tool Lambda Function
+  DedupToolFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-dedup-tool'
+      Description: 'Semantic deduplication tool with embedding-based similarity'
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: lambda-packages/dedup-tool.zip
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+          ARTICLES_TABLE: !Ref ArticlesTable
+          BEDROCK_EMBEDDING_MODEL: !Ref BedrockEmbeddingModel
+          SIMILARITY_THRESHOLD: !Ref SimilarityThreshold
+          OPENSEARCH_ENDPOINT: !If 
+            - EnableOpenSearchCondition
+            - !GetAtt OpenSearchCollection.CollectionEndpoint
+            - ''
+          KMS_KEY_ID: !Ref KMSKey
+      TracingConfig:
+        Mode: !If [EnableXRayTracingCondition, Active, PassThrough]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-dedup-tool'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Guardrail Tool Lambda Function
+  GuardrailToolFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-guardrail-tool'
+      Description: 'Content guardrail tool with policy enforcement'
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: lambda-packages/guardrail-tool.zip
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+          ARTICLES_TABLE: !Ref ArticlesTable
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          CONFIDENCE_THRESHOLD: !Ref ConfidenceThreshold
+          KMS_KEY_ID: !Ref KMSKey
+      TracingConfig:
+        Mode: !If [EnableXRayTracingCondition, Active, PassThrough]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-guardrail-tool'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Storage Tool Lambda Function
+  StorageToolFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-storage-tool'
+      Description: 'Article storage and retrieval tool'
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: lambda-packages/storage-tool.zip
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+          ARTICLES_TABLE: !Ref ArticlesTable
+          CONTENT_BUCKET: !Ref ContentBucket
+          KMS_KEY_ID: !Ref KMSKey
+      TracingConfig:
+        Mode: !If [EnableXRayTracingCondition, Active, PassThrough]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-storage-tool'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Human Escalation Lambda Function
+  HumanEscalationFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-human-escalation'
+      Description: 'Human escalation and notification handler'
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: lambda-packages/human-escalation.zip
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+          ARTICLES_TABLE: !Ref ArticlesTable
+          SES_SENDER_EMAIL: !Ref SESenderEmail
+          ESCALATION_EMAILS: !Join [',', !Ref EscalationEmails]
+          KMS_KEY_ID: !Ref KMSKey
+      TracingConfig:
+        Mode: !If [EnableXRayTracingCondition, Active, PassThrough]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-human-escalation'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Notifier Lambda Function
+  NotifierFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-notifier'
+      Description: 'Notification service for published articles and alerts'
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: lambda-packages/notifier.zip
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+          SES_SENDER_EMAIL: !Ref SESenderEmail
+          ALERT_EMAILS: !Join [',', !Ref AlertEmails]
+          KMS_KEY_ID: !Ref KMSKey
+      TracingConfig:
+        Mode: !If [EnableXRayTracingCondition, Active, PassThrough]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-notifier'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Analyst Assistant Lambda Function (for API Gateway)
+  AnalystAssistantFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-analyst-assistant'
+      Description: 'AI-powered analyst assistant for chat interface'
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: lambda-packages/analyst-assistant.zip
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+          ARTICLES_TABLE: !Ref ArticlesTable
+          MEMORY_TABLE: !Ref MemoryTable
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          KNOWLEDGE_BASE_ID: !If
+            - EnableAgentsAndOpenSearchCondition
+            - !Ref BedrockKnowledgeBase
+            - ''
+          KMS_KEY_ID: !Ref KMSKey
+      TracingConfig:
+        Mode: !If [EnableXRayTracingCondition, Active, PassThrough]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-analyst-assistant'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Query Knowledge Base Lambda Function
+  QueryKnowledgeBaseFunction:
+    Type: AWS::Lambda::Function
+    Condition: EnableAgentsAndOpenSearchCondition
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-query-kb'
+      Description: 'Knowledge base query function for RAG operations'
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: lambda-packages/query-kb.zip
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+          KNOWLEDGE_BASE_ID: !Ref BedrockKnowledgeBase
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          KMS_KEY_ID: !Ref KMSKey
+      TracingConfig:
+        Mode: !If [EnableXRayTracingCondition, Active, PassThrough]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-query-kb'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Commentary API Lambda Function
+  CommentaryApiFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-commentary-api'
+      Description: 'API for managing article comments and annotations'
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: lambda-packages/commentary-api.zip
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+          COMMENTS_TABLE: !Ref CommentsTable
+          ARTICLES_TABLE: !Ref ArticlesTable
+          KMS_KEY_ID: !Ref KMSKey
+      TracingConfig:
+        Mode: !If [EnableXRayTracingCondition, Active, PassThrough]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-commentary-api'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Publish Decision Lambda Function
+  PublishDecisionFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-publish-decision'
+      Description: 'Human review decision processing for article publication'
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: lambda-packages/publish-decision.zip
+      MemorySize: !Ref LambdaMemorySize
+      Timeout: !Ref LambdaTimeout
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+          ARTICLES_TABLE: !Ref ArticlesTable
+          CONTENT_BUCKET: !Ref ContentBucket
+          KMS_KEY_ID: !Ref KMSKey
+      TracingConfig:
+        Mode: !If [EnableXRayTracingCondition, Active, PassThrough]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-publish-decision'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ============================================================================
+  # STEP FUNCTIONS STATE MACHINE
+  # ============================================================================
+
+  # Step Functions Execution Role
+  StepFunctionsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-stepfunctions-execution-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StepFunctionsExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt FeedParserFunction.Arn
+                  - !GetAtt RelevancyEvaluatorFunction.Arn
+                  - !GetAtt DedupToolFunction.Arn
+                  - !GetAtt GuardrailToolFunction.Arn
+                  - !GetAtt StorageToolFunction.Arn
+                  - !GetAtt HumanEscalationFunction.Arn
+                  - !GetAtt NotifierFunction.Arn
+                  - !GetAtt PublishDecisionFunction.Arn
+              - Effect: Allow
+                Action:
+                  - bedrock-agent-runtime:InvokeAgent
+                Resource: !If
+                  - EnableAgentsCondition
+                  - !GetAtt IngestorAgent.AgentArn
+                  - !Ref AWS::NoValue
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogDelivery
+                  - logs:GetLogDelivery
+                  - logs:UpdateLogDelivery
+                  - logs:DeleteLogDelivery
+                  - logs:ListLogDeliveries
+                  - logs:PutResourcePolicy
+                  - logs:DescribeResourcePolicies
+                  - logs:DescribeLogGroups
+                Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-stepfunctions-execution-role'
+
+  # Main Ingestion State Machine
+  IngestionStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub '${ProjectName}-${Environment}-ingestion-workflow'
+      DefinitionString: !If
+        - EnableAgentsCondition
+        - !Sub |
+          {
+            "Comment": "Sentinel cybersecurity news ingestion and triage workflow (Agent Mode)",
+            "StartAt": "InvokeIngestorAgent",
+            "States": {
+              "InvokeIngestorAgent": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::bedrock:invokeAgent",
+                "Parameters": {
+                  "AgentId": "${IngestorAgent}",
+                  "AgentAliasId": "${IngestorAgentAlias.AgentAliasId}",
+                  "SessionId.$": "$.sessionId",
+                  "InputText.$": "$.inputText"
+                },
+                "Retry": [
+                  {
+                    "ErrorEquals": ["States.TaskFailed"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2.0
+                  }
+                ],
+                "Catch": [
+                  {
+                    "ErrorEquals": ["States.ALL"],
+                    "Next": "HandleAgentError"
+                  }
+                ],
+                "End": true
+              },
+              "HandleAgentError": {
+                "Type": "Task",
+                "Resource": "${HumanEscalationFunction.Arn}",
+                "Parameters": {
+                  "error.$": "$.Error",
+                  "cause.$": "$.Cause",
+                  "input.$": "$",
+                  "errorType": "AgentExecutionError"
+                },
+                "End": true
+              }
+            }
+          }
+        - !Sub |
+          {
+            "Comment": "Sentinel cybersecurity news ingestion and triage workflow (Lambda Mode)",
+            "StartAt": "ParseFeeds",
+            "States": {
+              "ParseFeeds": {
+                "Type": "Task",
+                "Resource": "${FeedParserFunction.Arn}",
+                "Parameters": {
+                  "feedConfigs.$": "$.feedConfigs",
+                  "batchSize.$": "$.batchSize"
+                },
+                "Retry": [
+                  {
+                    "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 6,
+                    "BackoffRate": 2.0
+                  }
+                ],
+                "Catch": [
+                  {
+                    "ErrorEquals": ["States.ALL"],
+                    "Next": "HandleParseError",
+                    "ResultPath": "$.error"
+                  }
+                ],
+                "Next": "ProcessArticles"
+              },
+            "ProcessArticles": {
+              "Type": "Map",
+              "ItemsPath": "$.articles",
+              "MaxConcurrency": ${MaxConcurrentFeeds},
+              "Iterator": {
+                "StartAt": "EvaluateRelevance",
+                "States": {
+                  "EvaluateRelevance": {
+                    "Type": "Task",
+                    "Resource": "${RelevancyEvaluatorFunction.Arn}",
+                    "Parameters": {
+                      "article.$": "$"
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                        "IntervalSeconds": 2,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2.0
+                      }
+                    ],
+                    "Next": "CheckRelevance"
+                  },
+                  "CheckRelevance": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$.relevancy_score",
+                        "NumericGreaterThan": ${RelevanceThreshold},
+                        "Next": "DeduplicateArticle"
+                      }
+                    ],
+                    "Default": "ArchiveArticle"
+                  },
+                  "DeduplicateArticle": {
+                    "Type": "Task",
+                    "Resource": "${DedupToolFunction.Arn}",
+                    "Parameters": {
+                      "article.$": "$"
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                        "IntervalSeconds": 2,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2.0
+                      }
+                    ],
+                    "Next": "CheckDuplication"
+                  },
+                  "CheckDuplication": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$.is_duplicate",
+                        "BooleanEquals": true,
+                        "Next": "ArchiveArticle"
+                      }
+                    ],
+                    "Default": "ApplyGuardrails"
+                  },
+                  "ApplyGuardrails": {
+                    "Type": "Task",
+                    "Resource": "${GuardrailToolFunction.Arn}",
+                    "Parameters": {
+                      "article.$": "$"
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                        "IntervalSeconds": 2,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2.0
+                      }
+                    ],
+                    "Next": "CheckGuardrails"
+                  },
+                  "CheckGuardrails": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Variable": "$.guardrail_passed",
+                        "BooleanEquals": false,
+                        "Next": "EscalateForReview"
+                      },
+                      {
+                        "Variable": "$.triage_action",
+                        "StringEquals": "AUTO_PUBLISH",
+                        "Next": "StoreAndPublish"
+                      }
+                    ],
+                    "Default": "EscalateForReview"
+                  },
+                  "StoreAndPublish": {
+                    "Type": "Task",
+                    "Resource": "${StorageToolFunction.Arn}",
+                    "Parameters": {
+                      "article.$": "$",
+                      "action": "publish"
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                        "IntervalSeconds": 2,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2.0
+                      }
+                    ],
+                    "Next": "SendNotification"
+                  },
+                  "EscalateForReview": {
+                    "Type": "Task",
+                    "Resource": "${HumanEscalationFunction.Arn}",
+                    "Parameters": {
+                      "article.$": "$",
+                      "reason": "requires_review"
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                        "IntervalSeconds": 2,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2.0
+                      }
+                    ],
+                    "Next": "StoreForReview"
+                  },
+                  "StoreForReview": {
+                    "Type": "Task",
+                    "Resource": "${StorageToolFunction.Arn}",
+                    "Parameters": {
+                      "article.$": "$",
+                      "action": "review"
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                        "IntervalSeconds": 2,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2.0
+                      }
+                    ],
+                    "End": true
+                  },
+                  "ArchiveArticle": {
+                    "Type": "Task",
+                    "Resource": "${StorageToolFunction.Arn}",
+                    "Parameters": {
+                      "article.$": "$",
+                      "action": "archive"
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                        "IntervalSeconds": 2,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2.0
+                      }
+                    ],
+                    "End": true
+                  },
+                  "SendNotification": {
+                    "Type": "Task",
+                    "Resource": "${NotifierFunction.Arn}",
+                    "Parameters": {
+                      "article.$": "$",
+                      "notification_type": "published"
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                        "IntervalSeconds": 2,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2.0
+                      }
+                    ],
+                    "End": true
+                  }
+                }
+              },
+              "Next": "CompileResults"
+            },
+            "CompileResults": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${StorageToolFunction.Arn}",
+                "Payload": {
+                  "results.$": "$",
+                  "action": "compile_batch_results"
+                }
+              },
+              "End": true
+            },
+              "HandleParseError": {
+                "Type": "Task",
+                "Resource": "${HumanEscalationFunction.Arn}",
+                "Parameters": {
+                  "error.$": "$.error",
+                  "input.$": "$",
+                  "errorType": "FeedParsingError"
+                },
+                "End": true
+              }
+            }
+          }
+      RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
+      LoggingConfiguration:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !Sub '${LambdaLogGroup}:*'
+      TracingConfiguration:
+        Enabled: !If [EnableXRayTracingCondition, true, false]
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-ingestion-state-machine'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ============================================================================
+  # COGNITO AUTHENTICATION RESOURCES
+  # ============================================================================
+  
+  # Cognito User Pool
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Condition: EnableAmplifyCondition
+    Properties:
+      UserPoolName: !Sub '${ProjectName}-${Environment}-user-pool'
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          TemporaryPasswordValidityDays: 7
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+        - Name: name
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+      UserPoolTags:
+        Name: !Sub '${ProjectName}-${Environment}-user-pool'
+        Environment: !Ref Environment
+        Project: !Ref ProjectName
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+        InviteMessageAction: EMAIL
+        TemporaryPasswordValidityDays: 7
+
+  # Cognito User Pool Client
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Condition: EnableAmplifyCondition
+    Properties:
+      ClientName: !Sub '${ProjectName}-${Environment}-client'
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs: !Ref AmplifyCallbackUrls
+      LogoutURLs: !Ref AmplifyLogoutUrls
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+        - aws.cognito.signin.user.admin
+      AllowedOAuthFlowsUserPoolClient: true
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+      PreventUserExistenceErrors: ENABLED
+      RefreshTokenValidity: 30
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+
+  # Cognito Identity Pool
+  CognitoIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Condition: EnableAmplifyCondition
+    Properties:
+      IdentityPoolName: !Sub '${ProjectName}-${Environment}-identity-pool'
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId: !Ref CognitoUserPoolClient
+          ProviderName: !GetAtt CognitoUserPool.ProviderName
+          ServerSideTokenCheck: true
+
+  # Cognito Identity Pool Roles
+  CognitoIdentityPoolRoleAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Condition: EnableAmplifyCondition
+    Properties:
+      IdentityPoolId: !Ref CognitoIdentityPool
+      Roles:
+        authenticated: !GetAtt CognitoAuthenticatedRole.Arn
+        unauthenticated: !GetAtt CognitoUnauthenticatedRole.Arn
+
+  # IAM Role for Authenticated Users
+  CognitoAuthenticatedRole:
+    Type: AWS::IAM::Role
+    Condition: EnableAmplifyCondition
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-cognito-authenticated-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                'cognito-identity.amazonaws.com:aud': !Ref CognitoIdentityPool
+              'ForAnyValue:StringLike':
+                'cognito-identity.amazonaws.com:amr': authenticated
+      Policies:
+        - PolicyName: CognitoAuthenticatedPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - execute-api:Invoke
+                Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/GET/*'
+              - Effect: Allow
+                Action:
+                  - execute-api:Invoke
+                Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/POST/*'
+
+  # IAM Role for Unauthenticated Users
+  CognitoUnauthenticatedRole:
+    Type: AWS::IAM::Role
+    Condition: EnableAmplifyCondition
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-cognito-unauthenticated-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                'cognito-identity.amazonaws.com:aud': !Ref CognitoIdentityPool
+              'ForAnyValue:StringLike':
+                'cognito-identity.amazonaws.com:amr': unauthenticated
+      Policies:
+        - PolicyName: CognitoUnauthenticatedPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Deny
+                Action: '*'
+                Resource: '*'
+
+  # ============================================================================
+  # API GATEWAY RESOURCES
+  # ============================================================================
+  
+  # API Gateway REST API
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-api'
+      Description: Sentinel API Gateway for web interface
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      BinaryMediaTypes:
+        - 'application/octet-stream'
+        - 'application/pdf'
+        - 'image/*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-api-gateway'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # API Gateway Cognito Authorizer
+  ApiGatewayAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Condition: EnableAmplifyCondition
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-cognito-authorizer'
+      RestApiId: !Ref ApiGateway
+      Type: COGNITO_USER_POOLS
+      ProviderARNs:
+        - !GetAtt CognitoUserPool.Arn
+      IdentitySource: method.request.header.Authorization
+
+  # API Gateway Deployment
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref ApiGateway
+      StageName: prod
+      StageDescription:
+        Description: Production stage for Sentinel API
+        Variables:
+          environment: !Ref Environment
+        MethodSettings:
+          - ResourcePath: '/*'
+            HttpMethod: '*'
+            LoggingLevel: INFO
+            DataTraceEnabled: true
+            MetricsEnabled: true
+
+  # ============================================================================
+  # AMPLIFY WEB APPLICATION RESOURCES
+  # ============================================================================
+  
+  # Amplify App
+  AmplifyApp:
+    Type: AWS::Amplify::App
+    Condition: EnableAmplifyCondition
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-app'
+      Description: Sentinel Cybersecurity Triage Platform Web Interface
+      Repository: !Ref AmplifyRepositoryUrl
+      Platform: WEB_COMPUTE
+      EnvironmentVariables:
+        - Name: REACT_APP_USER_POOL_ID
+          Value: !Ref CognitoUserPool
+        - Name: REACT_APP_USER_POOL_CLIENT_ID
+          Value: !Ref CognitoUserPoolClient
+        - Name: REACT_APP_IDENTITY_POOL_ID
+          Value: !Ref CognitoIdentityPool
+        - Name: REACT_APP_API_GATEWAY_URL
+          Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
+        - Name: REACT_APP_AWS_REGION
+          Value: !Ref AWS::Region
+        - Name: REACT_APP_ENVIRONMENT
+          Value: !Ref Environment
+      BuildSpec: |
+        version: 1
+        frontend:
+          phases:
+            preBuild:
+              commands:
+                - npm install
+            build:
+              commands:
+                - npm run build
+          artifacts:
+            baseDirectory: build
+            files:
+              - '**/*'
+          cache:
+            paths:
+              - node_modules/**/*
+      IAMServiceRole: !GetAtt AmplifyServiceRole.Arn
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-amplify-app'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Amplify Branch
+  AmplifyBranch:
+    Type: AWS::Amplify::Branch
+    Condition: EnableAmplifyCondition
+    Properties:
+      AppId: !GetAtt AmplifyApp.AppId
+      BranchName: main
+      EnableAutoBuild: true
+      Framework: React
+      Stage: PRODUCTION
+      EnvironmentVariables:
+        - Name: AMPLIFY_DIFF_DEPLOY
+          Value: 'false'
+        - Name: AMPLIFY_MONOREPO_APP_ROOT
+          Value: frontend
+
+  # IAM Role for Amplify Service
+  AmplifyServiceRole:
+    Type: AWS::IAM::Role
+    Condition: EnableAmplifyCondition
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-amplify-service-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: amplify.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AmplifyServicePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  # ============================================================================
+  # BEDROCK AGENTCORE RESOURCES
+  # ============================================================================
+  
+  # IAM Role for Bedrock Agent
+  BedrockAgentRole:
+    Type: AWS::IAM::Role
+    Condition: EnableAgentsCondition
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-bedrock-agent-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: BedrockAgentPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource: 
+                  - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}'
+                  - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockEmbeddingModel}'
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ProjectName}-${Environment}-*'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ContentBucket}/*'
+                  - !Sub 'arn:aws:s3:::${ArtifactsBucket}/*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt ArticlesTable.Arn
+                  - !GetAtt MemoryTable.Arn
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-bedrock-agent-role'
+
+  # Bedrock Knowledge Base (for RAG capabilities)
+  BedrockKnowledgeBase:
+    Type: AWS::Bedrock::KnowledgeBase
+    Condition: EnableAgentsAndOpenSearchCondition
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-knowledge-base'
+      Description: 'Sentinel cybersecurity knowledge base for RAG operations'
+      RoleArn: !GetAtt BedrockKnowledgeBaseRole.Arn
+      KnowledgeBaseConfiguration:
+        Type: VECTOR
+        VectorKnowledgeBaseConfiguration:
+          EmbeddingModelArn: !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockEmbeddingModel}'
+      StorageConfiguration:
+        Type: OPENSEARCH_SERVERLESS
+        OpensearchServerlessConfiguration:
+          CollectionArn: !GetAtt OpenSearchCollection.Arn
+          VectorIndexName: sentinel-vector-index
+          FieldMapping:
+            VectorField: vector
+            TextField: text
+            MetadataField: metadata
+      Tags:
+        Name: !Sub '${ProjectName}-${Environment}-knowledge-base'
+        Environment: !Ref Environment
+        Project: !Ref ProjectName
+
+  # IAM Role for Bedrock Knowledge Base
+  BedrockKnowledgeBaseRole:
+    Type: AWS::IAM::Role
+    Condition: EnableAgentsAndOpenSearchCondition
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-bedrock-kb-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: BedrockKnowledgeBasePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockEmbeddingModel}'
+              - Effect: Allow
+                Action:
+                  - aoss:APIAccessAll
+                Resource: !GetAtt OpenSearchCollection.Arn
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt ContentBucket.Arn
+                  - !Sub '${ContentBucket}/*'
+
+  # OpenSearch Serverless Collection for Vector Storage
+  OpenSearchCollection:
+    Type: AWS::OpenSearchServerless::Collection
+    Condition: EnableOpenSearchCondition
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-vectors'
+      Description: 'Vector storage for Sentinel knowledge base'
+      Type: VECTORSEARCH
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-opensearch-collection'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Bedrock Ingestor Agent
+  IngestorAgent:
+    Type: AWS::Bedrock::Agent
+    Condition: EnableAgentsCondition
+    Properties:
+      AgentName: !Sub '${ProjectName}-${Environment}-ingestor-agent'
+      Description: 'Sentinel cybersecurity news ingestor agent'
+      FoundationModel: !Ref BedrockModelId
+      Instruction: |
+        You are a cybersecurity news ingestor agent for the Sentinel platform. 
+        Your role is to process RSS feeds, evaluate article relevance, and coordinate 
+        the ingestion pipeline. You have access to various tools for feed parsing, 
+        relevance evaluation, deduplication, and content storage.
+        
+        Key responsibilities:
+        1. Parse RSS feeds from cybersecurity sources
+        2. Evaluate article relevance using AI models
+        3. Perform semantic deduplication
+        4. Apply content guardrails
+        5. Coordinate human review workflows
+        6. Store and publish approved content
+        
+        Always maintain high standards for cybersecurity content quality and relevance.
+      AgentResourceRoleArn: !GetAtt BedrockAgentRole.Arn
+      KnowledgeBases: !If
+        - EnableAgentsAndOpenSearchCondition
+        - - KnowledgeBaseId: !Ref BedrockKnowledgeBase
+            Description: 'Cybersecurity knowledge base for context'
+            KnowledgeBaseState: ENABLED
+        - !Ref AWS::NoValue
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-ingestor-agent'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Bedrock Agent Alias
+  IngestorAgentAlias:
+    Type: AWS::Bedrock::AgentAlias
+    Condition: EnableAgentsCondition
+    Properties:
+      AgentId: !Ref IngestorAgent
+      AgentAliasName: !Sub '${Environment}-alias'
+      Description: !Sub 'Agent alias for ${Environment} environment'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-agent-alias'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
 
   # CloudWatch Dashboard
   SentinelDashboard:
@@ -655,7 +1902,238 @@ Outputs:
     Description: URL of CloudWatch dashboard
     Value: !Sub 'https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${ProjectName}-${Environment}-dashboard'
   
-  # Deployment Information
+  # ============================================================================
+  # COGNITO OUTPUTS
+  # ============================================================================
+  
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref CognitoUserPool
+    Condition: EnableAmplifyCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-user-pool-id'
+
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref CognitoUserPoolClient
+    Condition: EnableAmplifyCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-user-pool-client-id'
+
+  IdentityPoolId:
+    Description: Cognito Identity Pool ID
+    Value: !Ref CognitoIdentityPool
+    Condition: EnableAmplifyCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-identity-pool-id'
+
+  UserPoolArn:
+    Description: Cognito User Pool ARN
+    Value: !GetAtt CognitoUserPool.Arn
+    Condition: EnableAmplifyCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-user-pool-arn'
+
+  # ============================================================================
+  # API GATEWAY OUTPUTS
+  # ============================================================================
+  
+  ApiGatewayId:
+    Description: API Gateway REST API ID
+    Value: !Ref ApiGateway
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-api-gateway-id'
+
+  ApiGatewayUrl:
+    Description: API Gateway URL
+    Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-api-gateway-url'
+
+  ApiGatewayAuthorizerId:
+    Description: API Gateway Cognito Authorizer ID
+    Value: !Ref ApiGatewayAuthorizer
+    Condition: EnableAmplifyCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-api-gateway-authorizer-id'
+
+  # ============================================================================
+  # AMPLIFY OUTPUTS
+  # ============================================================================
+  
+  AmplifyAppId:
+    Description: Amplify App ID
+    Value: !GetAtt AmplifyApp.AppId
+    Condition: EnableAmplifyCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-amplify-app-id'
+
+  AmplifyAppArn:
+    Description: Amplify App ARN
+    Value: !GetAtt AmplifyApp.Arn
+    Condition: EnableAmplifyCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-amplify-app-arn'
+
+  AmplifyAppUrl:
+    Description: Amplify App URL
+    Value: !Sub 'https://${AmplifyBranch.BranchName}.${AmplifyApp.DefaultDomain}'
+    Condition: EnableAmplifyCondition
+
+  AmplifyDefaultDomain:
+    Description: Amplify Default Domain
+    Value: !GetAtt AmplifyApp.DefaultDomain
+    Condition: EnableAmplifyCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-amplify-default-domain'
+
+  # ============================================================================
+  # BEDROCK AGENTCORE OUTPUTS
+  # ============================================================================
+  
+  IngestorAgentId:
+    Description: Bedrock Ingestor Agent ID
+    Value: !Ref IngestorAgent
+    Condition: EnableAgentsCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-ingestor-agent-id'
+
+  IngestorAgentArn:
+    Description: Bedrock Ingestor Agent ARN
+    Value: !GetAtt IngestorAgent.AgentArn
+    Condition: EnableAgentsCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-ingestor-agent-arn'
+
+  IngestorAgentAliasId:
+    Description: Bedrock Ingestor Agent Alias ID
+    Value: !GetAtt IngestorAgentAlias.AgentAliasId
+    Condition: EnableAgentsCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-ingestor-agent-alias-id'
+
+  BedrockKnowledgeBaseId:
+    Description: Bedrock Knowledge Base ID
+    Value: !Ref BedrockKnowledgeBase
+    Condition: EnableAgentsAndOpenSearchCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-knowledge-base-id'
+
+  BedrockKnowledgeBaseArn:
+    Description: Bedrock Knowledge Base ARN
+    Value: !GetAtt BedrockKnowledgeBase.KnowledgeBaseArn
+    Condition: EnableAgentsAndOpenSearchCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-knowledge-base-arn'
+
+  OpenSearchCollectionArn:
+    Description: OpenSearch Serverless Collection ARN
+    Value: !GetAtt OpenSearchCollection.Arn
+    Condition: EnableOpenSearchCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-opensearch-collection-arn'
+
+  OpenSearchCollectionEndpoint:
+    Description: OpenSearch Serverless Collection Endpoint
+    Value: !GetAtt OpenSearchCollection.CollectionEndpoint
+    Condition: EnableOpenSearchCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-opensearch-collection-endpoint'
+
+  # ============================================================================
+  # LAMBDA FUNCTION OUTPUTS
+  # ============================================================================
+  
+  FeedParserFunctionArn:
+    Description: Feed Parser Lambda Function ARN
+    Value: !GetAtt FeedParserFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-feed-parser-arn'
+
+  RelevancyEvaluatorFunctionArn:
+    Description: Relevancy Evaluator Lambda Function ARN
+    Value: !GetAtt RelevancyEvaluatorFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-relevancy-evaluator-arn'
+
+  DedupToolFunctionArn:
+    Description: Dedup Tool Lambda Function ARN
+    Value: !GetAtt DedupToolFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-dedup-tool-arn'
+
+  GuardrailToolFunctionArn:
+    Description: Guardrail Tool Lambda Function ARN
+    Value: !GetAtt GuardrailToolFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-guardrail-tool-arn'
+
+  StorageToolFunctionArn:
+    Description: Storage Tool Lambda Function ARN
+    Value: !GetAtt StorageToolFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-storage-tool-arn'
+
+  HumanEscalationFunctionArn:
+    Description: Human Escalation Lambda Function ARN
+    Value: !GetAtt HumanEscalationFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-human-escalation-arn'
+
+  NotifierFunctionArn:
+    Description: Notifier Lambda Function ARN
+    Value: !GetAtt NotifierFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-notifier-arn'
+
+  AnalystAssistantFunctionArn:
+    Description: Analyst Assistant Lambda Function ARN
+    Value: !GetAtt AnalystAssistantFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-analyst-assistant-arn'
+
+  QueryKnowledgeBaseFunctionArn:
+    Description: Query Knowledge Base Lambda Function ARN
+    Value: !If
+      - EnableAgentsAndOpenSearchCondition
+      - !GetAtt QueryKnowledgeBaseFunction.Arn
+      - 'Not deployed - requires EnableAgents=true and EnableOpenSearch=true'
+    Condition: EnableAgentsAndOpenSearchCondition
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-query-kb-arn'
+
+  CommentaryApiFunctionArn:
+    Description: Commentary API Lambda Function ARN
+    Value: !GetAtt CommentaryApiFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-commentary-api-arn'
+
+  PublishDecisionFunctionArn:
+    Description: Publish Decision Lambda Function ARN
+    Value: !GetAtt PublishDecisionFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-publish-decision-arn'
+
+  # ============================================================================
+  # STEP FUNCTIONS OUTPUTS
+  # ============================================================================
+  
+  IngestionStateMachineArn:
+    Description: Ingestion State Machine ARN
+    Value: !Ref IngestionStateMachine
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-ingestion-state-machine-arn'
+
+  StepFunctionsExecutionRoleArn:
+    Description: Step Functions Execution Role ARN
+    Value: !GetAtt StepFunctionsExecutionRole.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-stepfunctions-execution-role-arn'
+
+  # ============================================================================
+  # DEPLOYMENT INFORMATION
+  # ============================================================================
+  
   DeploymentInfo:
     Description: Deployment information and next steps
     Value: !Sub |
@@ -665,10 +2143,30 @@ Outputs:
       Amplify Enabled: ${EnableAmplify}
       OpenSearch Enabled: ${EnableOpenSearch}
       
+      Cognito Configuration:
+      - User Pool ID: ${CognitoUserPool}
+      - Client ID: ${CognitoUserPoolClient}
+      - Identity Pool ID: ${CognitoIdentityPool}
+      
+      API Gateway:
+      - API ID: ${ApiGateway}
+      - URL: https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod
+      
+      Amplify App:
+      - App ID: ${AmplifyApp.AppId}
+      - URL: https://${AmplifyBranch.BranchName}.${AmplifyApp.DefaultDomain}
+      
+      Bedrock Agent:
+      - Agent ID: ${IngestorAgent}
+      - Alias ID: ${IngestorAgentAlias.AgentAliasId}
+      
       Next Steps:
-      1. Configure RSS feeds in config/feeds.yaml
-      2. Update keywords in config/keywords.yaml
-      3. Set up SES email identities for notifications
-      4. Deploy Lambda function packages to artifacts bucket
-      5. Test end-to-end ingestion pipeline
-      6. Monitor CloudWatch dashboards and logs
+      1. Configure Cognito users and groups
+      2. Connect Amplify to Git repository
+      3. Prepare and test Bedrock agents
+      4. Configure RSS feeds in config/feeds.yaml
+      5. Update keywords in config/keywords.yaml
+      6. Set up SES email identities for notifications
+      7. Deploy Lambda function packages to artifacts bucket
+      8. Test end-to-end ingestion pipeline
+      9. Monitor CloudWatch dashboards and logs

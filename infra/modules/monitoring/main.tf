@@ -1029,7 +1029,7 @@ EOF
 }
 
 # EventBridge Rule for Keyword Trending Analysis
-resource "aws_events_rule" "keyword_analysis" {
+resource "aws_cloudwatch_event_rule" "keyword_analysis" {
   name                = "${var.name_prefix}-keyword-analysis"
   description         = "Trigger keyword trending analysis"
   schedule_expression = "rate(1 hour)"
@@ -1048,13 +1048,13 @@ resource "aws_lambda_permission" "allow_eventbridge_keyword_analysis" {
   action        = "lambda:InvokeFunction"
   function_name = var.keyword_analysis_lambda_arn
   principal     = "events.amazonaws.com"
-  source_arn    = aws_events_rule.keyword_analysis.arn
+  source_arn    = aws_cloudwatch_event_rule.keyword_analysis.arn
 }
 
-resource "aws_events_target" "keyword_analysis_lambda" {
+resource "aws_cloudwatch_event_target" "keyword_analysis_lambda" {
   count = var.keyword_analysis_lambda_arn != "" ? 1 : 0
 
-  rule      = aws_events_rule.keyword_analysis.name
+  rule      = aws_cloudwatch_event_rule.keyword_analysis.name
   target_id = "KeywordAnalysisLambdaTarget"
   arn       = var.keyword_analysis_lambda_arn
 }

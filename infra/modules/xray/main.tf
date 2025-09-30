@@ -326,7 +326,7 @@ EOF
 }
 
 # EventBridge Rule for X-Ray Insights Notifications
-resource "aws_events_rule" "xray_insights" {
+resource "aws_cloudwatch_event_rule" "xray_insights" {
   count = var.enable_xray_insights_notifications ? 1 : 0
 
   name        = "${var.name_prefix}-xray-insights"
@@ -346,10 +346,10 @@ resource "aws_events_rule" "xray_insights" {
   })
 }
 
-resource "aws_events_target" "xray_insights_sns" {
+resource "aws_cloudwatch_event_target" "xray_insights_sns" {
   count = var.enable_xray_insights_notifications ? 1 : 0
 
-  rule      = aws_events_rule.xray_insights[0].name
+  rule      = aws_cloudwatch_event_rule.xray_insights[0].name
   target_id = "XRayInsightsSNSTarget"
   arn       = var.alerts_topic_arn
 }

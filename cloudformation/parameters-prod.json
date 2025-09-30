@@ -40,20 +40,16 @@
     "ParameterValue": "900"
   },
   {
-    "ParameterKey": "DynamoDBBillingMode",
-    "ParameterValue": "PROVISIONED"
-  },
-  {
     "ParameterKey": "SESenderEmail",
-    "ParameterValue": "noreply@sentinel.company.com"
+    "ParameterValue": "bensonkingori96@gmail.com"
   },
   {
     "ParameterKey": "EscalationEmails",
-    "ParameterValue": "security-team@company.com,ops-team@company.com"
+    "ParameterValue": "bensonkingori96@gmail.com"
   },
   {
     "ParameterKey": "AlertEmails",
-    "ParameterValue": "security-alerts@company.com,soc@company.com"
+    "ParameterValue": "bensonkingori96@gmail.com"
   },
   {
     "ParameterKey": "MaxConcurrentFeeds",

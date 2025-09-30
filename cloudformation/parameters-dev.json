@@ -40,20 +40,16 @@
     "ParameterValue": "300"
   },
   {
-    "ParameterKey": "DynamoDBBillingMode",
-    "ParameterValue": "PAY_PER_REQUEST"
-  },
-  {
     "ParameterKey": "SESenderEmail",
-    "ParameterValue": "noreply@sentinel-dev.local"
+    "ParameterValue": "bensonkingori96@gmail.com"
   },
   {
     "ParameterKey": "EscalationEmails",
-    "ParameterValue": "dev-team@example.com"
+    "ParameterValue": "bensonkingori96@gmail.com"
   },
   {
     "ParameterKey": "AlertEmails",
-    "ParameterValue": "dev-alerts@example.com"
+    "ParameterValue": "bensonkingori96@gmail.com"
   },
   {
     "ParameterKey": "MaxConcurrentFeeds",
@@ -61,7 +57,7 @@
   },
   {
     "ParameterKey": "ContentRetentionDays",
-    "ParameterValue": "90"
+    "ParameterValue": "91"
   },
   {
     "ParameterKey": "RelevanceThreshold",

@@ -8,6 +8,7 @@ terraform {
     # These values must be provided via terraform init -backend-config
     # or a backend.hcl file, as variables cannot be used here
     key     = "sentinel/terraform.tfstate"
+    region  = "us-east-1"
     encrypt = true
   }
 }

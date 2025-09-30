@@ -144,7 +144,6 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
-          BillingMode: !Ref DynamoDBBillingMode
         - IndexName: cluster-published_at-index
           KeySchema:
             - AttributeName: cluster_id
@@ -207,7 +206,6 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
-          BillingMode: !Ref DynamoDBBillingMode
         - IndexName: parent-created_at-index
           KeySchema:
             - AttributeName: parent_comment_id
@@ -255,7 +253,6 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
-          BillingMode: !Ref DynamoDBBillingMode
         - IndexName: session-created_at-index
           KeySchema:
             - AttributeName: session_id
