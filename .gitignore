@@ -13,3 +13,17 @@ dist/
 
 # OS files
 .DS_Store
+
+# Local Terraform directories
+.terraform/
+infra/.terraform/
+
+# .tfstate files
+*.tfstate
+*.tfstate.backup
+
+# Crash log files
+crash.log
+
+# Terraform plan files
+*.tfplan

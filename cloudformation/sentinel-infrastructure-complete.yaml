@@ -5,7 +5,7 @@ Parameters:
   # Environment Configuration
   Environment:
     Type: String
-    Default: dev
+    Default: prod
     AllowedValues: [dev, staging, prod]
     Description: Environment name for resource naming and configuration
   
@@ -17,19 +17,19 @@ Parameters:
   # Feature Flags
   EnableAgents:
     Type: String
-    Default: 'false'
+    Default: 'true'
     AllowedValues: ['true', 'false']
     Description: Enable Bedrock AgentCore integration
   
   EnableAmplify:
     Type: String
-    Default: 'false'
+    Default: 'true'
     AllowedValues: ['true', 'false']
     Description: Enable Amplify web application
   
   EnableOpenSearch:
     Type: String
-    Default: 'false'
+    Default: 'true'
     AllowedValues: ['true', 'false']
     Description: Enable OpenSearch Serverless for vector search
   
@@ -81,12 +81,12 @@ Parameters:
   
   EscalationEmails:
     Type: CommaDelimitedList
-    Default: ''
+    Default: 'bensonkingori96@gmail.com'
     Description: Email addresses for escalation notifications
   
   AlertEmails:
     Type: CommaDelimitedList
-    Default: ''
+    Default: 'bensonkingori96@gmail.com'
     Description: Email addresses for alert notifications
   
   # Processing Configuration
@@ -1323,7 +1323,7 @@ Resources:
           RequireLowercase: true
           RequireNumbers: true
           RequireSymbols: true
-          TemporaryPasswordValidityDays: 7
+          TemporaryPasswordValidityDays: 7 # This is the correct location
       Schema:
         - Name: email
           AttributeDataType: String
@@ -1342,9 +1342,8 @@ Resources:
           - Name: verified_email
             Priority: 1
       AdminCreateUserConfig:
+        # This section is now corrected.
         AllowAdminCreateUserOnly: true
-        InviteMessageAction: EMAIL
-        TemporaryPasswordValidityDays: 7
 
   # Cognito User Pool Client
   CognitoUserPoolClient:
@@ -1498,9 +1497,103 @@ Resources:
         - !GetAtt CognitoUserPool.Arn
       IdentitySource: method.request.header.Authorization
 
+  # --- API Gateway Resources (Paths) ---
+
+  AnalystAssistantResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: 'analyst-assistant'
+      RestApiId: !Ref ApiGateway
+
+  CommentaryApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: 'commentary'
+      RestApiId: !Ref ApiGateway
+
+  PublishDecisionResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: 'publish-decision'
+      RestApiId: !Ref ApiGateway
+
+  # --- API Gateway Methods (Endpoints) ---
+
+  AnalystAssistantMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+      HttpMethod: POST
+      ResourceId: !Ref AnalystAssistantResource
+      RestApiId: !Ref ApiGateway
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AnalystAssistantFunction.Arn}/invocations'
+
+  CommentaryApiMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+      HttpMethod: POST
+      ResourceId: !Ref CommentaryApiResource
+      RestApiId: !Ref ApiGateway
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CommentaryApiFunction.Arn}/invocations'
+
+  PublishDecisionMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref ApiGatewayAuthorizer
+      HttpMethod: POST
+      ResourceId: !Ref PublishDecisionResource
+      RestApiId: !Ref ApiGateway
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PublishDecisionFunction.Arn}/invocations'
+
+  # --- Lambda Invoke Permissions ---
+
+  AnalystAssistantPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt AnalystAssistantFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/analyst-assistant'
+
+  CommentaryApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt CommentaryApiFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/commentary'
+
+  PublishDecisionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt PublishDecisionFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/publish-decision'
+
   # API Gateway Deployment
   ApiGatewayDeployment:
     Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - AnalystAssistantMethod
+      - CommentaryApiMethod
+      - PublishDecisionMethod
     Properties:
       RestApiId: !Ref ApiGateway
       StageName: prod
@@ -1726,6 +1819,7 @@ Resources:
   OpenSearchCollection:
     Type: AWS::OpenSearchServerless::Collection
     Condition: EnableOpenSearchCondition
+    DependsOn: OpenSearchEncryptionPolicy
     Properties:
       Name: !Sub '${ProjectName}-${Environment}-vectors'
       Description: 'Vector storage for Sentinel knowledge base'
@@ -1737,6 +1831,28 @@ Resources:
           Value: !Ref Environment
         - Key: Project
           Value: !Ref ProjectName
+  
+  # OpenSearch Serverless Encryption Policy 
+  OpenSearchEncryptionPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Condition: EnableOpenSearchCondition # Must match the collection's condition
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-enc-policy'
+      Type: encryption
+      Description: 'Encryption policy for the Sentinel OpenSearch collection'
+      Policy: !Sub |
+        {
+          "Rules": [
+            {
+              "ResourceType": "collection",
+              "Resource": [
+                "collection/${ProjectName}-${Environment}-vectors"
+              ]
+            }
+          ],
+          "AWSOwnedKey": false,
+          "KmsARN": "${KMSKey.Arn}"
+        }
 
   # Bedrock Ingestor Agent
   IngestorAgent:
@@ -1768,13 +1884,11 @@ Resources:
             Description: 'Cybersecurity knowledge base for context'
             KnowledgeBaseState: ENABLED
         - !Ref AWS::NoValue
+      # Tags are now in the correct map format.
       Tags:
-        - Key: Name
-          Value: !Sub '${ProjectName}-${Environment}-ingestor-agent'
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Project
-          Value: !Ref ProjectName
+        Name: !Sub '${ProjectName}-${Environment}-ingestor-agent'
+        Environment: !Ref Environment
+        Project: !Ref ProjectName
 
   # Bedrock Agent Alias
   IngestorAgentAlias:
@@ -1784,13 +1898,11 @@ Resources:
       AgentId: !Ref IngestorAgent
       AgentAliasName: !Sub '${Environment}-alias'
       Description: !Sub 'Agent alias for ${Environment} environment'
+      # Tags are now in the correct map format.
       Tags:
-        - Key: Name
-          Value: !Sub '${ProjectName}-${Environment}-agent-alias'
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Project
-          Value: !Ref ProjectName
+        Name: !Sub '${ProjectName}-${Environment}-agent-alias'
+        Environment: !Ref Environment
+        Project: !Ref ProjectName
 
   # CloudWatch Dashboard
   SentinelDashboard:
