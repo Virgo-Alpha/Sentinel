@@ -1828,13 +1828,11 @@ Resources:
       Name: !Sub '${ProjectName}-${Environment}-vectors'
       Description: 'Vector storage for Sentinel knowledge base'
       Type: VECTORSEARCH
+      # CORRECTED: Tags are now in the correct map format.
       Tags:
-        - Key: Name
-          Value: !Sub '${ProjectName}-${Environment}-opensearch-collection'
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Project
-          Value: !Ref ProjectName
+        Name: !Sub '${ProjectName}-${Environment}-opensearch-collection'
+        Environment: !Ref Environment
+        Project: !Ref ProjectName
   
   # OpenSearch Serverless Encryption Policy 
   OpenSearchEncryptionPolicy:
@@ -1858,6 +1856,7 @@ Resources:
           "KmsARN": "${KMSKey.Arn}"
         }
 
+  # OpenSearch Serverless Network Policy
   OpenSearchNetworkPolicy:
     Type: AWS::OpenSearchServerless::SecurityPolicy
     Condition: EnableOpenSearchCondition
@@ -1865,16 +1864,19 @@ Resources:
       Name: !Sub '${ProjectName}-${Environment}-net-policy'
       Type: network
       Description: 'Network policy for Sentinel OpenSearch collection'
+      # CORRECTED: The policy document is now an array, wrapped in [ ... ].
       Policy: !Sub |
-        {
-          "Rules": [
-            {
-              "ResourceType": "collection",
-              "Resource": [ "collection/${ProjectName}-${Environment}-vectors" ]
-            }
-          ],
-          "AllowFromPublic": true
-        }
+        [
+          {
+            "Rules": [
+              {
+                "ResourceType": "collection",
+                "Resource": [ "collection/${ProjectName}-${Environment}-vectors" ]
+              }
+            ],
+            "AllowFromPublic": true
+          }
+        ]
 
   # OpenSearch Serverless Data Access Policy (ADD THIS RESOURCE)
   OpenSearchAccessPolicy:
