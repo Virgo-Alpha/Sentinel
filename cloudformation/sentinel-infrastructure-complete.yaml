@@ -262,6 +262,7 @@ Resources:
                 - sns.amazonaws.com
                 - events.amazonaws.com
                 - states.amazonaws.com
+                - aoss.amazonaws.com
             Action:
               - kms:Encrypt
               - kms:Decrypt
@@ -1758,6 +1759,7 @@ Resources:
   # Bedrock Knowledge Base (for RAG capabilities)
   BedrockKnowledgeBase:
     Type: AWS::Bedrock::KnowledgeBase
+    DependsOn: OpenSearchAccessPolicy
     Condition: EnableAgentsAndOpenSearchCondition
     Properties:
       Name: !Sub '${ProjectName}-${Environment}-knowledge-base'
@@ -1813,13 +1815,15 @@ Resources:
                   - s3:ListBucket
                 Resource:
                   - !GetAtt ContentBucket.Arn
-                  - !Sub '${ContentBucket}/*'
+                  - !Sub '${ContentBucket.Arn}/*'
 
   # OpenSearch Serverless Collection for Vector Storage
   OpenSearchCollection:
     Type: AWS::OpenSearchServerless::Collection
     Condition: EnableOpenSearchCondition
-    DependsOn: OpenSearchEncryptionPolicy
+    DependsOn:
+      - OpenSearchEncryptionPolicy
+      - OpenSearchNetworkPolicy
     Properties:
       Name: !Sub '${ProjectName}-${Environment}-vectors'
       Description: 'Vector storage for Sentinel knowledge base'
@@ -1853,6 +1857,53 @@ Resources:
           "AWSOwnedKey": false,
           "KmsARN": "${KMSKey.Arn}"
         }
+
+  OpenSearchNetworkPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Condition: EnableOpenSearchCondition
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-net-policy'
+      Type: network
+      Description: 'Network policy for Sentinel OpenSearch collection'
+      Policy: !Sub |
+        {
+          "Rules": [
+            {
+              "ResourceType": "collection",
+              "Resource": [ "collection/${ProjectName}-${Environment}-vectors" ]
+            }
+          ],
+          "AllowFromPublic": true
+        }
+
+  # OpenSearch Serverless Data Access Policy (ADD THIS RESOURCE)
+  OpenSearchAccessPolicy:
+    Type: AWS::OpenSearchServerless::AccessPolicy
+    Condition: EnableOpenSearchCondition # Must match the collection's condition
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-data-access'
+      Type: data
+      Description: 'Policy to grant Bedrock and other services access to the collection'
+      Policy: !Sub |
+        [
+          {
+            "Rules": [
+              {
+                "ResourceType": "collection",
+                "Resource": [ "collection/${ProjectName}-${Environment}-vectors" ],
+                "Permission": [ "aoss:*" ]
+              },
+              {
+                "ResourceType": "index",
+                "Resource": [ "index/${ProjectName}-${Environment}-vectors/*" ],
+                "Permission": [ "aoss:*" ]
+              }
+            ],
+            "Principal": [
+              "${BedrockKnowledgeBaseRole.Arn}"
+            ]
+          }
+        ]
 
   # Bedrock Ingestor Agent
   IngestorAgent:
